@@ -41,5 +41,25 @@ export function formatHours(hours: number): string {
   return `${h}h ${m}m`;
 }
 
+/**
+ * Format minutes to human-readable time string
+ * - If less than 60 minutes: shows "X phút"
+ * - If 60 minutes or more: shows "X giờ Y phút"
+ */
+export function formatTimeDifference(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes} phút`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (remainingMinutes === 0) {
+    return `${hours} giờ`;
+  }
+  
+  return `${hours} giờ ${remainingMinutes} phút`;
+}
+
 
 

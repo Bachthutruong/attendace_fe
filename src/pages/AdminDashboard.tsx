@@ -16,17 +16,23 @@ import {
   Eye,
   Check,
   X,
+  Settings,
+  XCircle,
+  FileText,
+  AlertCircle,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAppSelector } from '@/hooks/useAppSelector';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { logout } from '@/store/slices/authSlice';
 import Button from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import Pagination from '@/components/ui/Pagination';
 import AttendanceDetailModal from '@/components/AttendanceDetailModal';
 import Dialog from '@/components/ui/Dialog';
+import Input from '@/components/ui/Input';
 import axios from '@/lib/axios';
 import {
   User,
@@ -35,11 +41,12 @@ import {
   TodayAttendanceResponse,
   ApiResponse,
   PaginationResponse,
+  LeaveRequest,
 } from '@/types';
 import { formatDate, formatTime, formatHours } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-type TabType = 'dashboard' | 'employees' | 'attendances' | 'notifications';
+type TabType = 'dashboard' | 'employees' | 'attendances' | 'notifications' | 'settings' | 'leave-requests';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -54,6 +61,15 @@ const AdminDashboard: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // Settings
+  const [settings, setSettings] = useState({
+    defaultCheckInTime: '',
+    defaultCheckOutTime: '',
+    allowedIPs: [] as string[],
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [newIP, setNewIP] = useState('');
 
   // Pagination for employees
   const [employeePage, setEmployeePage] = useState(1);
@@ -81,6 +97,27 @@ const AdminDashboard: React.FC = () => {
   // Detail modal
   const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
 
+  // Leave requests
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveRequestLoading, setLeaveRequestLoading] = useState(false);
+  const [leaveRequestActionLoading, setLeaveRequestActionLoading] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [selectedLeaveRequest, setSelectedLeaveRequest] = useState<LeaveRequest | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [leaveRequestFilters, setLeaveRequestFilters] = useState({
+    status: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [leaveRequestPagination, setLeaveRequestPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
+
   // Approval dialog
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<{
@@ -99,6 +136,8 @@ const AdminDashboard: React.FC = () => {
     email: '',
     password: '',
     role: 'employee' as 'admin' | 'employee',
+    customCheckInTime: '',
+    customCheckOutTime: '',
   });
 
   useEffect(() => {
@@ -111,6 +150,7 @@ const AdminDashboard: React.FC = () => {
     fetchTodayAttendances();
     fetchNotifications();
     fetchAllEmployeesForFilter();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
@@ -118,8 +158,12 @@ const AdminDashboard: React.FC = () => {
       fetchEmployees();
     } else if (activeTab === 'attendances') {
       fetchAllAttendances();
+    } else if (activeTab === 'settings') {
+      fetchSettings();
+    } else if (activeTab === 'leave-requests') {
+      fetchLeaveRequests();
     }
-  }, [activeTab, employeePage, employeePageSize, attendancePage, attendancePageSize, filters]);
+  }, [activeTab, employeePage, employeePageSize, attendancePage, attendancePageSize, filters, leaveRequestPagination.page, leaveRequestFilters]);
 
   const fetchTodayAttendances = async () => {
     try {
@@ -255,24 +299,226 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const response = await axios.get<ApiResponse<any>>('/admin/settings');
+      if (response.data.data) {
+        setSettings({
+          defaultCheckInTime: response.data.data.defaultCheckInTime || '',
+          defaultCheckOutTime: response.data.data.defaultCheckOutTime || '',
+          allowedIPs: response.data.data.allowedIPs || [],
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  const handleUpdateSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSettingsLoading(true);
+      await axios.put('/admin/settings', {
+        defaultCheckInTime: settings.defaultCheckInTime || undefined,
+        defaultCheckOutTime: settings.defaultCheckOutTime || undefined,
+        allowedIPs: settings.allowedIPs,
+      });
+      toast.success('Cập nhật cài đặt thành công');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleAddIP = () => {
+    if (newIP.trim() && !settings.allowedIPs.includes(newIP.trim())) {
+      setSettings({
+        ...settings,
+        allowedIPs: [...settings.allowedIPs, newIP.trim()],
+      });
+      setNewIP('');
+    } else if (settings.allowedIPs.includes(newIP.trim())) {
+      toast.error('IP này đã tồn tại trong danh sách');
+    }
+  };
+
+  const handleRemoveIP = (ip: string) => {
+    setSettings({
+      ...settings,
+      allowedIPs: settings.allowedIPs.filter((i) => i !== ip),
+    });
+  };
+
+  // Leave requests functions
+  const fetchLeaveRequests = async () => {
+    try {
+      setLeaveRequestLoading(true);
+      const params = new URLSearchParams({
+        page: leaveRequestPagination.page.toString(),
+        limit: leaveRequestPagination.limit.toString(),
+      });
+      if (leaveRequestFilters.status) params.append('status', leaveRequestFilters.status);
+      if (leaveRequestFilters.startDate) params.append('startDate', leaveRequestFilters.startDate);
+      if (leaveRequestFilters.endDate) params.append('endDate', leaveRequestFilters.endDate);
+
+      const response = await axios.get<PaginationResponse<LeaveRequest>>(
+        `/admin/leave-requests?${params.toString()}`
+      );
+      // Ensure all user objects have id field
+      const requests = response.data.data.map((req: any) => {
+        if (req.userId && typeof req.userId === 'object') {
+          req.userId = { ...req.userId, id: req.userId.id || req.userId._id || '' };
+        }
+        if (req.supportingStaff) {
+          req.supportingStaff = req.supportingStaff.map((staff: any) => {
+            if (typeof staff === 'object') {
+              return { ...staff, id: staff.id || staff._id || '' };
+            }
+            return staff;
+          });
+        }
+        if (req.reviewedBy && typeof req.reviewedBy === 'object') {
+          req.reviewedBy = { ...req.reviewedBy, id: req.reviewedBy.id || req.reviewedBy._id || '' };
+        }
+        return req;
+      });
+      setLeaveRequests(requests);
+      setLeaveRequestPagination(response.data.pagination);
+    } catch (error: any) {
+      console.error('Error fetching leave requests:', error);
+      toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách đơn nghỉ phép');
+    } finally {
+      setLeaveRequestLoading(false);
+    }
+  };
+
+  const handleViewLeaveRequestDetail = (request: LeaveRequest) => {
+    setSelectedLeaveRequest(request);
+    setShowDetailDialog(true);
+  };
+
+  const handleApproveLeaveRequest = (request: LeaveRequest) => {
+    setSelectedLeaveRequest(request);
+    setShowApproveDialog(true);
+  };
+
+  const handleRejectLeaveRequest = (request: LeaveRequest) => {
+    setSelectedLeaveRequest(request);
+    setRejectionReason('');
+    setShowRejectDialog(true);
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!selectedLeaveRequest) return;
+
+    try {
+      setLeaveRequestActionLoading(true);
+      await axios.patch<ApiResponse<LeaveRequest>>(
+        `/admin/leave-requests/${selectedLeaveRequest._id}/approve`
+      );
+      toast.success('Duyệt đơn nghỉ phép thành công');
+      setShowApproveDialog(false);
+      setSelectedLeaveRequest(null);
+      fetchLeaveRequests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Lỗi khi duyệt đơn nghỉ phép');
+    } finally {
+      setLeaveRequestActionLoading(false);
+    }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!selectedLeaveRequest || !rejectionReason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối');
+      return;
+    }
+
+    try {
+      setLeaveRequestActionLoading(true);
+      await axios.patch<ApiResponse<LeaveRequest>>(
+        `/admin/leave-requests/${selectedLeaveRequest._id}/reject`,
+        { rejectionReason }
+      );
+      toast.success('Từ chối đơn nghỉ phép thành công');
+      setShowRejectDialog(false);
+      setSelectedLeaveRequest(null);
+      setRejectionReason('');
+      fetchLeaveRequests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Lỗi khi từ chối đơn nghỉ phép');
+    } finally {
+      setLeaveRequestActionLoading(false);
+    }
+  };
+
+  const getLeaveRequestStatusBadge = (status: LeaveRequest['status']) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="warning">Chờ duyệt</Badge>;
+      case 'approved':
+        return <Badge variant="success">Đã duyệt</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Đã từ chối</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const getLeaveTypeText = (type: LeaveRequest['leaveType']) => {
+    switch (type) {
+      case 'half-day-morning':
+        return 'Nửa buổi sáng';
+      case 'half-day-afternoon':
+        return 'Nửa buổi chiều';
+      case 'full-day':
+        return 'Cả ngày';
+      default:
+        return type;
+    }
+  };
+
+  const getSupportingStaffNames = (request: LeaveRequest) => {
+    if (!request.supportingStaff || request.supportingStaff.length === 0) return [];
+    return request.supportingStaff
+      .filter((staff): staff is User => typeof staff !== 'string')
+      .map((staff) => staff.name);
+  };
+
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const formData: any = {
+        employeeCode: employeeForm.employeeCode,
+        name: employeeForm.name,
+        email: employeeForm.email,
+        role: employeeForm.role,
+        customCheckInTime: employeeForm.customCheckInTime || undefined,
+        customCheckOutTime: employeeForm.customCheckOutTime || undefined,
+      };
+      
+      if (!editingEmployee) {
+        formData.password = employeeForm.password;
+      }
+
       if (editingEmployee) {
-        await axios.put(`/admin/users/${editingEmployee.id}`, {
-          employeeCode: employeeForm.employeeCode,
-          name: employeeForm.name,
-          email: employeeForm.email,
-          role: employeeForm.role,
-        });
+        await axios.put(`/admin/users/${editingEmployee.id}`, formData);
         toast.success('Cập nhật nhân viên thành công');
       } else {
-        await axios.post('/admin/users', employeeForm);
+        await axios.post('/admin/users', formData);
         toast.success('Tạo nhân viên thành công');
       }
       setShowEmployeeForm(false);
       setEditingEmployee(null);
-      setEmployeeForm({ employeeCode: '', name: '', email: '', password: '', role: 'employee' });
+      setEmployeeForm({ 
+        employeeCode: '', 
+        name: '', 
+        email: '', 
+        password: '', 
+        role: 'employee',
+        customCheckInTime: '',
+        customCheckOutTime: '',
+      });
       fetchEmployees();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
@@ -287,6 +533,8 @@ const AdminDashboard: React.FC = () => {
       email: employee.email,
       password: '',
       role: employee.role,
+      customCheckInTime: employee.customCheckInTime || '',
+      customCheckOutTime: employee.customCheckOutTime || '',
     });
     setShowEmployeeForm(true);
   };
@@ -400,7 +648,9 @@ const AdminDashboard: React.FC = () => {
               { id: 'dashboard' as TabType, label: 'Tổng quan', icon: BarChart3 },
               { id: 'employees' as TabType, label: 'Nhân viên', icon: Users },
               { id: 'attendances' as TabType, label: 'Chấm công', icon: Calendar },
+              { id: 'leave-requests' as TabType, label: 'Đơn nghỉ phép', icon: FileText },
               { id: 'notifications' as TabType, label: 'Thông báo', icon: Bell },
+              { id: 'settings' as TabType, label: 'Cài đặt', icon: Settings },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -535,9 +785,33 @@ const AdminDashboard: React.FC = () => {
                                 ? 'Chờ duyệt'
                                 : 'Vắng'}
                             </Badge>
-                            {(attendance.hasDeviceAlert || attendance.hasIpAlert) && (
-                              <span title={attendance.alertMessage} className="inline-flex">
-                                <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                            {(attendance.hasDeviceAlert || attendance.hasIpAlert || attendance.hasTimeAlert) && (
+                              <span 
+                                title={
+                                  (attendance.hasTimeAlert 
+                                    ? attendance.timeAlertMessage || 'Cảnh báo thời gian'
+                                    : attendance.alertMessage || 'Có cảnh báo') +
+                                  (attendance.fraudReason ? `\n\nLý do: ${attendance.fraudReason}` : '')
+                                } 
+                                className="inline-flex"
+                              >
+                                <AlertTriangle 
+                                  className={`w-4 h-4 ${
+                                    attendance.hasTimeAlert 
+                                      ? 'text-red-600' 
+                                      : 'text-yellow-600'
+                                  }`} 
+                                />
+                              </span>
+                            )}
+                            {attendance.fraudReason && (
+                              <span 
+                                title={`Lý do: ${attendance.fraudReason}`}
+                                className="inline-flex"
+                              >
+                                <span className="text-xs text-blue-600" title={attendance.fraudReason}>
+                                  📝
+                                </span>
                               </span>
                             )}
                           </div>
@@ -688,6 +962,47 @@ const AdminDashboard: React.FC = () => {
                         </select>
                       </div>
                     </div>
+                    
+                    {/* Custom Time Settings Section */}
+                    <div className="border-t pt-4 mt-4">
+                      <h3 className="text-lg font-semibold mb-4">Cài đặt thời gian chấm công riêng</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Nếu không cài đặt, nhân viên sẽ sử dụng giờ mặc định từ cài đặt hệ thống.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Giờ check-in riêng (HH:mm)
+                          </label>
+                          <input
+                            type="time"
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={employeeForm.customCheckInTime}
+                            onChange={(e) =>
+                              setEmployeeForm({ ...employeeForm, customCheckInTime: e.target.value })
+                            }
+                            placeholder="VD: 09:00"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Để trống nếu muốn dùng giờ mặc định</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Giờ check-out riêng (HH:mm)
+                          </label>
+                          <input
+                            type="time"
+                            className="w-full px-3 py-2 border rounded-md"
+                            value={employeeForm.customCheckOutTime}
+                            onChange={(e) =>
+                              setEmployeeForm({ ...employeeForm, customCheckOutTime: e.target.value })
+                            }
+                            placeholder="VD: 18:00"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Để trống nếu muốn dùng giờ mặc định</p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="flex gap-2">
                       <Button type="submit">
                         {editingEmployee ? 'Cập nhật' : 'Tạo mới'}
@@ -698,7 +1013,15 @@ const AdminDashboard: React.FC = () => {
                         onClick={() => {
                           setShowEmployeeForm(false);
                           setEditingEmployee(null);
-                          setEmployeeForm({ employeeCode: '', name: '', email: '', password: '', role: 'employee' });
+                          setEmployeeForm({ 
+                            employeeCode: '', 
+                            name: '', 
+                            email: '', 
+                            password: '', 
+                            role: 'employee',
+                            customCheckInTime: '',
+                            customCheckOutTime: '',
+                          });
                         }}
                       >
                         Hủy
@@ -986,9 +1309,33 @@ const AdminDashboard: React.FC = () => {
                                     ? 'Chờ duyệt'
                                     : 'Vắng'}
                                 </Badge>
-                                {(attendance.hasDeviceAlert || attendance.hasIpAlert) && (
-                                  <span title={attendance.alertMessage} className="inline-flex">
-                                    <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                                {(attendance.hasDeviceAlert || attendance.hasIpAlert || attendance.hasTimeAlert) && (
+                                  <span 
+                                    title={
+                                      (attendance.hasTimeAlert 
+                                        ? attendance.timeAlertMessage || 'Cảnh báo thời gian'
+                                        : attendance.alertMessage || 'Có cảnh báo') +
+                                      (attendance.fraudReason ? `\n\nLý do: ${attendance.fraudReason}` : '')
+                                    } 
+                                    className="inline-flex"
+                                  >
+                                    <AlertTriangle 
+                                      className={`w-4 h-4 ${
+                                        attendance.hasTimeAlert 
+                                          ? 'text-red-600' 
+                                          : 'text-yellow-600'
+                                      }`} 
+                                    />
+                                  </span>
+                                )}
+                                {attendance.fraudReason && (
+                                  <span 
+                                    title={`Lý do: ${attendance.fraudReason}`}
+                                    className="inline-flex"
+                                  >
+                                    <span className="text-xs text-blue-600" title={attendance.fraudReason}>
+                                      📝
+                                    </span>
                                   </span>
                                 )}
                               </div>
@@ -1110,6 +1457,416 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Leave Requests Tab */}
+        {activeTab === 'leave-requests' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Quản lý đơn nghỉ phép</h2>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Chờ duyệt</p>
+                      <p className="text-2xl font-bold text-yellow-600">
+                        {leaveRequests.filter((r) => r.status === 'pending').length}
+                      </p>
+                    </div>
+                    <AlertCircle className="w-8 h-8 text-yellow-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Đã duyệt</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {leaveRequests.filter((r) => r.status === 'approved').length}
+                      </p>
+                    </div>
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Đã từ chối</p>
+                      <p className="text-2xl font-bold text-red-600">
+                        {leaveRequests.filter((r) => r.status === 'rejected').length}
+                      </p>
+                    </div>
+                    <XCircle className="w-8 h-8 text-red-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="w-5 h-5" />
+                  Bộ lọc
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Trạng thái
+                    </label>
+                    <select
+                      value={leaveRequestFilters.status}
+                      onChange={(e) => {
+                        setLeaveRequestFilters({ ...leaveRequestFilters, status: e.target.value });
+                        setLeaveRequestPagination({ ...leaveRequestPagination, page: 1 });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Tất cả</option>
+                      <option value="pending">Chờ duyệt</option>
+                      <option value="approved">Đã duyệt</option>
+                      <option value="rejected">Đã từ chối</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Từ ngày
+                    </label>
+                    <Input
+                      type="date"
+                      value={leaveRequestFilters.startDate}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setLeaveRequestFilters({ ...leaveRequestFilters, startDate: e.target.value });
+                        setLeaveRequestPagination({ ...leaveRequestPagination, page: 1 });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Đến ngày
+                    </label>
+                    <Input
+                      type="date"
+                      value={leaveRequestFilters.endDate}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setLeaveRequestFilters({ ...leaveRequestFilters, endDate: e.target.value });
+                        setLeaveRequestPagination({ ...leaveRequestPagination, page: 1 });
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setLeaveRequestFilters({ status: '', startDate: '', endDate: '' });
+                        setLeaveRequestPagination({ ...leaveRequestPagination, page: 1 });
+                      }}
+                      className="w-full"
+                    >
+                      Xóa bộ lọc
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Leave Requests List */}
+            {leaveRequestLoading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-2 text-gray-600">Đang tải...</p>
+              </div>
+            ) : leaveRequests.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">Không có đơn nghỉ phép nào</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {leaveRequests.map((request) => {
+                  const supportingStaff = getSupportingStaffNames(request);
+                  const requestUser =
+                    typeof request.userId === 'string' ? null : request.userId;
+
+                  return (
+                    <Card key={request._id}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {requestUser ? requestUser.name : 'N/A'} -{' '}
+                                {formatDate(new Date(request.leaveDate))}
+                              </h3>
+                              {getLeaveRequestStatusBadge(request.status)}
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              {requestUser && (
+                                <div className="flex items-center gap-2">
+                                  <UserIcon className="w-4 h-4" />
+                                  <span>
+                                    {requestUser.employeeCode} - {requestUser.email}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                <span>{getLeaveTypeText(request.leaveType)}</span>
+                              </div>
+                              <div>
+                                <strong>Lý do:</strong> {request.reason}
+                              </div>
+                              {supportingStaff.length > 0 && (
+                                <div className="flex items-center gap-2 flex-wrap mt-2">
+                                  <UserIcon className="w-4 h-4" />
+                                  <span className="font-medium">Nhân viên hỗ trợ:</span>
+                                  {supportingStaff.map((name, idx) => (
+                                    <Badge key={idx} variant="outline">
+                                      {name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {request.status === 'rejected' && request.rejectionReason && (
+                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                  <div className="flex items-center gap-2 text-red-700">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <strong>Lý do từ chối:</strong>
+                                  </div>
+                                  <p className="text-red-600 mt-1">{request.rejectionReason}</p>
+                                </div>
+                              )}
+                              {request.reviewedBy &&
+                                typeof request.reviewedBy !== 'string' && (
+                                  <div className="text-xs text-gray-500 mt-2">
+                                    Đã {request.status === 'approved' ? 'duyệt' : 'từ chối'} bởi:{' '}
+                                    {request.reviewedBy.name} vào{' '}
+                                    {request.reviewedAt
+                                      ? formatDate(new Date(request.reviewedAt))
+                                      : ''}
+                                  </div>
+                                )}
+                              <div className="text-xs text-gray-400 mt-2">
+                                Tạo lúc: {formatDate(new Date(request.createdAt))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewLeaveRequestDetail(request)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Chi tiết
+                            </Button>
+                            {request.status === 'pending' && (
+                              <>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleApproveLeaveRequest(request)}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Duyệt
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleRejectLeaveRequest(request)}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Từ chối
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {leaveRequestPagination.pages > 1 && (
+              <Pagination
+                currentPage={leaveRequestPagination.page}
+                totalPages={leaveRequestPagination.pages}
+                onPageChange={(page) =>
+                  setLeaveRequestPagination({ ...leaveRequestPagination, page })
+                }
+                pageSize={leaveRequestPagination.limit}
+                onPageSizeChange={(size) => {
+                  setLeaveRequestPagination({
+                    ...leaveRequestPagination,
+                    limit: size,
+                    page: 1,
+                  });
+                }}
+                totalItems={leaveRequestPagination.total}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Cài đặt hệ thống</h2>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Cài đặt giờ chấm công mặc định</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleUpdateSettings} className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-blue-800">
+                      <strong>Lưu ý:</strong> Cài đặt này sẽ áp dụng cho tất cả nhân viên nếu họ không có giờ chấm công riêng. 
+                      Bạn có thể cài đặt giờ riêng cho từng nhân viên trong phần chỉnh sửa nhân viên.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Giờ check-in mặc định (HH:mm)
+                      </label>
+                      <input
+                        type="time"
+                        className="w-full px-3 py-2 border rounded-md"
+                        value={settings.defaultCheckInTime}
+                        onChange={(e) =>
+                          setSettings({ ...settings, defaultCheckInTime: e.target.value })
+                        }
+                        placeholder="VD: 08:00"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Giờ check-in mặc định cho tất cả nhân viên
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Giờ check-out mặc định (HH:mm)
+                      </label>
+                      <input
+                        type="time"
+                        className="w-full px-3 py-2 border rounded-md"
+                        value={settings.defaultCheckOutTime}
+                        onChange={(e) =>
+                          setSettings({ ...settings, defaultCheckOutTime: e.target.value })
+                        }
+                        placeholder="VD: 17:00"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Giờ check-out mặc định cho tất cả nhân viên
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button type="submit" disabled={settingsLoading}>
+                      {settingsLoading ? 'Đang lưu...' : 'Lưu cài đặt'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fetchSettings()}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* IP Whitelist Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quản lý IP xác thực</CardTitle>
+                <CardDescription>
+                  Thêm danh sách IP được phép check-in/check-out. Nếu danh sách trống, hệ thống sẽ không kiểm tra IP whitelist.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Lưu ý:</strong> Khi có danh sách IP xác thực, nhân viên chỉ có thể check-in/check-out từ các IP trong danh sách này. 
+                      Nếu check-in/check-out từ IP khác, hệ thống sẽ phát hiện gian lận và yêu cầu nhập lý do.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 px-3 py-2 border rounded-md"
+                      placeholder="Nhập IP (ví dụ: 192.168.1.1)"
+                      value={newIP}
+                      onChange={(e) => setNewIP(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddIP();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleAddIP}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Thêm IP
+                    </Button>
+                  </div>
+
+                  {settings.allowedIPs.length > 0 ? (
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm font-medium text-gray-700 mb-3">
+                        Danh sách IP xác thực ({settings.allowedIPs.length}):
+                      </p>
+                      <div className="space-y-2">
+                        {settings.allowedIPs.map((ip) => (
+                          <div
+                            key={ip}
+                            className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
+                          >
+                            <span className="font-mono text-sm">{ip}</span>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRemoveIP(ip)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Chưa có IP nào trong danh sách</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Thêm IP để bắt đầu quản lý IP xác thực
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
 
       {/* Attendance Detail Modal */}
@@ -1164,6 +1921,188 @@ const AdminDashboard: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Dialog>
+
+      {/* Approve Leave Request Dialog */}
+      <Dialog
+        open={showApproveDialog}
+        onClose={() => {
+          setShowApproveDialog(false);
+          setSelectedLeaveRequest(null);
+        }}
+        title="Duyệt đơn nghỉ phép"
+        description="Bạn có chắc chắn muốn duyệt đơn nghỉ phép này?"
+        variant="default"
+        onConfirm={handleConfirmApprove}
+        confirmText="Duyệt"
+        cancelText="Hủy"
+      />
+
+      {/* Reject Leave Request Dialog */}
+      <Dialog
+        open={showRejectDialog}
+        onClose={() => {
+          setShowRejectDialog(false);
+          setSelectedLeaveRequest(null);
+          setRejectionReason('');
+        }}
+        title="Từ chối đơn nghỉ phép"
+        variant="danger"
+        showActions={false}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Lý do từ chối <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              rows={4}
+              required
+              placeholder="Nhập lý do từ chối..."
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowRejectDialog(false);
+              setSelectedLeaveRequest(null);
+              setRejectionReason('');
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirmReject}
+            disabled={leaveRequestActionLoading || !rejectionReason.trim()}
+          >
+            {leaveRequestActionLoading ? 'Đang xử lý...' : 'Từ chối'}
+          </Button>
+        </div>
+      </Dialog>
+
+      {/* Leave Request Detail Dialog */}
+      <Dialog
+        open={showDetailDialog}
+        onClose={() => {
+          setShowDetailDialog(false);
+          setSelectedLeaveRequest(null);
+        }}
+        title="Chi tiết đơn nghỉ phép"
+        showActions={false}
+      >
+        {selectedLeaveRequest && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nhân viên</label>
+                <div className="p-2 bg-gray-50 rounded">
+                  {typeof selectedLeaveRequest.userId === 'object' ? (
+                    <>
+                      <p className="font-semibold">{selectedLeaveRequest.userId.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedLeaveRequest.userId.employeeCode} - {selectedLeaveRequest.userId.email}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-gray-600">N/A</p>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày nghỉ</label>
+                <div className="p-2 bg-gray-50 rounded">
+                  <p className="font-semibold">{formatDate(new Date(selectedLeaveRequest.leaveDate))}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loại nghỉ phép</label>
+                <div className="p-2 bg-gray-50 rounded">
+                  <p>{getLeaveTypeText(selectedLeaveRequest.leaveType)}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                <div className="p-2 bg-gray-50 rounded">
+                  {getLeaveRequestStatusBadge(selectedLeaveRequest.status)}
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lý do nghỉ phép</label>
+              <div className="p-3 bg-gray-50 rounded">
+                <p className="text-gray-900">{selectedLeaveRequest.reason}</p>
+              </div>
+            </div>
+            {selectedLeaveRequest.supportingStaff && selectedLeaveRequest.supportingStaff.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nhân viên hỗ trợ</label>
+                <div className="p-3 bg-gray-50 rounded">
+                  <div className="flex flex-wrap gap-2">
+                    {getSupportingStaffNames(selectedLeaveRequest).map((name, idx) => (
+                      <Badge key={idx} variant="outline">
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {selectedLeaveRequest.status === 'rejected' && selectedLeaveRequest.rejectionReason && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lý do từ chối</label>
+                <div className="p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="text-red-900">{selectedLeaveRequest.rejectionReason}</p>
+                </div>
+              </div>
+            )}
+            {selectedLeaveRequest.reviewedBy && typeof selectedLeaveRequest.reviewedBy === 'object' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Người {selectedLeaveRequest.status === 'approved' ? 'duyệt' : 'từ chối'}
+                </label>
+                <div className="p-2 bg-gray-50 rounded">
+                  <p className="font-semibold">{selectedLeaveRequest.reviewedBy.name}</p>
+                  {selectedLeaveRequest.reviewedAt && (
+                    <p className="text-sm text-gray-600">
+                      Vào {formatDate(new Date(selectedLeaveRequest.reviewedAt))}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày tạo</label>
+                <p className="text-sm text-gray-600">
+                  {formatDate(new Date(selectedLeaveRequest.createdAt))}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cập nhật lần cuối</label>
+                <p className="text-sm text-gray-600">
+                  {formatDate(new Date(selectedLeaveRequest.updatedAt))}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDetailDialog(false);
+                  setSelectedLeaveRequest(null);
+                }}
+              >
+                Đóng
+              </Button>
+            </div>
+          </div>
+        )}
       </Dialog>
     </div>
   );

@@ -10,6 +10,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import AttendancePage from './pages/AttendancePage';
 import AdminDashboard from './pages/AdminDashboard';
+import LeaveRequestPage from './pages/LeaveRequestPage';
+import AdminLeaveRequestPage from './pages/AdminLeaveRequestPage';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -40,6 +42,24 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute adminOnly>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/leave-requests"
+          element={
+            <ProtectedRoute>
+              <LeaveRequestPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/admin/leave-requests"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminLeaveRequestPage />
             </ProtectedRoute>
           }
         />

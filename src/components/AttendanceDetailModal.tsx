@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Clock, AlertTriangle } from 'lucide-react';
 import { Attendance } from '@/types';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, formatTimeDifference } from '@/lib/utils';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
 
@@ -89,7 +89,7 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
             </div>
             <div className="border rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-2">Cảnh báo</p>
-              {attendance.hasDeviceAlert || attendance.hasIpAlert ? (
+              {attendance.hasDeviceAlert || attendance.hasIpAlert || attendance.hasTimeAlert ? (
                 <Badge variant="warning" className="flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" />
                   Có cảnh báo
@@ -100,14 +100,62 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Alert Message */}
+          {/* Time Alert Message */}
+          {attendance.hasTimeAlert && attendance.timeAlertMessage && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900 mb-2">⚠️ Cảnh báo thời gian</p>
+                  <p className="text-sm text-red-800 mb-2">{attendance.timeAlertMessage}</p>
+                  {attendance.checkInLateMinutes && (
+                    <div className="mt-2 p-2 bg-red-100 rounded">
+                      <p className="text-sm font-semibold text-red-900">Check-in muộn:</p>
+                      <p className="text-sm text-red-800">{formatTimeDifference(attendance.checkInLateMinutes)}</p>
+                    </div>
+                  )}
+                  {attendance.checkOutEarlyMinutes && (
+                    <div className="mt-2 p-2 bg-red-100 rounded">
+                      <p className="text-sm font-semibold text-red-900">Check-out sớm:</p>
+                      <p className="text-sm text-red-800">{formatTimeDifference(attendance.checkOutEarlyMinutes)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Security Alert Message */}
           {(attendance.hasDeviceAlert || attendance.hasIpAlert) && attendance.alertMessage && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex gap-3">
                 <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
+                <div className="flex-1">
                   <p className="font-semibold text-yellow-900 mb-1">Cảnh báo bảo mật</p>
-                  <p className="text-sm text-yellow-800">{attendance.alertMessage}</p>
+                  <p className="text-sm text-yellow-800 mb-2">{attendance.alertMessage}</p>
+                  {attendance.fraudReason && (
+                    <div className="mt-3 pt-3 border-t border-yellow-300">
+                      <p className="text-sm font-semibold text-yellow-900 mb-2">📝 Lý do được cung cấp:</p>
+                      <div className="bg-white rounded p-3 border border-yellow-200">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{attendance.fraudReason}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fraud Reason (if no security alert but has fraud reason) */}
+          {!(attendance.hasDeviceAlert || attendance.hasIpAlert) && attendance.fraudReason && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-blue-900 mb-2">📝 Lý do được cung cấp</p>
+                  <div className="bg-white rounded p-3 border border-blue-200">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{attendance.fraudReason}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -146,6 +194,14 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
                   <p className="text-sm text-gray-600 mb-1">Thiết bị</p>
                   <p className="font-semibold capitalize">{attendance.checkIn.deviceInfo.deviceType}</p>
                 </div>
+                {attendance.checkIn.deviceInfo.userAgent && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600 mb-1">User Agent</p>
+                    <p className="font-mono text-xs bg-gray-50 p-2 rounded border break-all">
+                      {attendance.checkIn.deviceInfo.userAgent}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -183,6 +239,14 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
                   <p className="text-sm text-gray-600 mb-1">Thiết bị</p>
                   <p className="font-semibold capitalize">{attendance.checkOut.deviceInfo.deviceType}</p>
                 </div>
+                {attendance.checkOut.deviceInfo.userAgent && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600 mb-1">User Agent</p>
+                    <p className="font-mono text-xs bg-gray-50 p-2 rounded border break-all">
+                      {attendance.checkOut.deviceInfo.userAgent}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
