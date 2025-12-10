@@ -28,7 +28,7 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
 
   const handleSubmit = () => {
     if (!reason.trim()) {
-      setError('Vui lòng nhập lý do khi phát hiện gian lận');
+      setError('請輸入異常理由');
       return;
     }
     onConfirm(reason.trim());
@@ -46,7 +46,7 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
     <Dialog
       open={open}
       onClose={handleCancel}
-      title="⚠️ Phát hiện gian lận chấm công"
+      title="⚠️ 偵測到考勤異常"
       showActions={false}
       variant="warning"
     >
@@ -56,14 +56,14 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
             <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold text-red-900 mb-2">
-                Hệ thống phát hiện dấu hiệu gian lận khi {type === 'check-in' ? 'check-in' : 'check-out'}:
+                系統在{type === 'check-in' ? '上班打卡' : '下班打卡'}時偵測到異常：
               </p>
               <div className="space-y-1 text-sm text-red-800">
                 {fraudInfo.hasIpAlert && (
-                  <p>• Địa chỉ IP không khớp hoặc không nằm trong danh sách IP xác thực</p>
+                  <p>• IP 位址不符或不在白名單中</p>
                 )}
                 {fraudInfo.hasDeviceAlert && (
-                  <p>• Thiết bị khác với các lần chấm công trước đó</p>
+                  <p>• 裝置與之前的考勤記錄不同</p>
                 )}
                 {fraudInfo.message && (
                   <p className="mt-2 font-medium">{fraudInfo.message}</p>
@@ -75,7 +75,7 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Vui lòng nhập lý do <span className="text-red-500">*</span>
+            請輸入理由 <span className="text-red-500">*</span>
           </label>
           <textarea
             value={reason}
@@ -83,7 +83,7 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
               setReason(e.target.value);
               setError('');
             }}
-            placeholder="Ví dụ: Làm việc từ xa, đang ở chi nhánh khác, sử dụng thiết bị mới..."
+            placeholder="例如：遠端工作、在其他分店、使用新裝置..."
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
             rows={4}
             required
@@ -95,14 +95,14 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <p className="text-sm text-yellow-800">
-            <strong>Lưu ý:</strong> Bạn phải nhập lý do để tiếp tục {type === 'check-in' ? 'check-in' : 'check-out'}. 
-            Nếu không nhập lý do, bạn không thể thực hiện chấm công.
+            <strong>注意：</strong> 您必須輸入理由才能繼續{type === 'check-in' ? '上班打卡' : '下班打卡'}。 
+            若未輸入理由，將無法進行打卡。
           </p>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button variant="outline" onClick={handleCancel}>
-            Hủy
+            取消
           </Button>
           <Button
             variant="default"
@@ -110,7 +110,7 @@ const FraudDetectionDialog: React.FC<FraudDetectionDialogProps> = ({
             disabled={!reason.trim()}
             className="bg-primary hover:bg-primary/90"
           >
-            Gửi và {type === 'check-in' ? 'Check-in' : 'Check-out'}
+            送出並{type === 'check-in' ? '上班打卡' : '下班打卡'}
           </Button>
         </div>
       </div>

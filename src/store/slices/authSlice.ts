@@ -22,13 +22,13 @@ export const login = createAsyncThunk(
   'auth/login',
   async (credentials: { loginId: string; password: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post<ApiResponse<{ token: string; user: User }>>(
+      const response = await axios.post<ApiResponse<{ token: string; user: User; currentIp?: string }>>(
         '/auth/login',
         credentials
       );
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Đăng nhập thất bại');
+      return rejectWithValue(error.response?.data?.message || '登入失敗');
     }
   }
 );
@@ -46,7 +46,7 @@ export const register = createAsyncThunk(
       );
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Đăng ký thất bại');
+      return rejectWithValue(error.response?.data?.message || '註冊失敗');
     }
   }
 );
@@ -58,7 +58,7 @@ export const getMe = createAsyncThunk(
       const response = await axios.get<ApiResponse<User>>('/auth/me');
       return response.data.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy thông tin');
+      return rejectWithValue(error.response?.data?.message || '取得資訊時發生錯誤');
     }
   }
 );

@@ -108,7 +108,7 @@ const LeaveRequestPage: React.FC = () => {
       setPagination(response.data.pagination);
     } catch (error: any) {
       console.error('Error fetching leave requests:', error);
-      toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '載入請假單列表時發生錯誤');
     } finally {
       setLoading(false);
     }
@@ -159,7 +159,7 @@ const LeaveRequestPage: React.FC = () => {
 
   const handleSubmitCreate = async () => {
     if (!formData.leaveDate || !formData.reason.trim()) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      toast.error('請填寫完整資訊');
       return;
     }
 
@@ -169,11 +169,11 @@ const LeaveRequestPage: React.FC = () => {
         ...formData,
         supportingStaff: selectedEmployees,
       });
-      toast.success('Tạo đơn nghỉ phép thành công');
+      toast.success('建立請假單成功');
       setShowCreateDialog(false);
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi tạo đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '建立請假單時發生錯誤');
     } finally {
       setActionLoading(false);
     }
@@ -181,7 +181,7 @@ const LeaveRequestPage: React.FC = () => {
 
   const handleSubmitEdit = async () => {
     if (!formData.leaveDate || !formData.reason.trim()) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      toast.error('請填寫完整資訊');
       return;
     }
 
@@ -193,12 +193,12 @@ const LeaveRequestPage: React.FC = () => {
         ...formData,
         supportingStaff: selectedEmployees,
       });
-      toast.success('Cập nhật đơn nghỉ phép thành công');
+      toast.success('更新請假單成功');
       setShowEditDialog(false);
       setSelectedRequest(null);
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '更新請假單時發生錯誤');
     } finally {
       setActionLoading(false);
     }
@@ -210,12 +210,12 @@ const LeaveRequestPage: React.FC = () => {
     try {
       setActionLoading(true);
       await axios.delete(`/leave-requests/${selectedRequest._id}`);
-      toast.success('Xóa đơn nghỉ phép thành công');
+      toast.success('刪除請假單成功');
       setShowDeleteDialog(false);
       setSelectedRequest(null);
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi xóa đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '刪除請假單時發生錯誤');
     } finally {
       setActionLoading(false);
     }
@@ -232,11 +232,11 @@ const LeaveRequestPage: React.FC = () => {
   const getStatusBadge = (status: LeaveRequest['status']) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="warning">Chờ duyệt</Badge>;
+        return <Badge variant="warning">待審核</Badge>;
       case 'approved':
-        return <Badge variant="success">Đã duyệt</Badge>;
+        return <Badge variant="success">已批准</Badge>;
       case 'rejected':
-        return <Badge variant="destructive">Đã từ chối</Badge>;
+        return <Badge variant="destructive">已拒絕</Badge>;
       default:
         return null;
     }
@@ -245,11 +245,11 @@ const LeaveRequestPage: React.FC = () => {
   const getLeaveTypeText = (type: LeaveRequest['leaveType']) => {
     switch (type) {
       case 'half-day-morning':
-        return 'Nửa buổi sáng';
+        return '上午半天';
       case 'half-day-afternoon':
-        return 'Nửa buổi chiều';
+        return '下午半天';
       case 'full-day':
-        return 'Cả ngày';
+        return '全天';
       default:
         return type;
     }
@@ -265,14 +265,14 @@ const LeaveRequestPage: React.FC = () => {
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
-    toast.success('Đã đăng xuất');
+    toast.success('已登出');
   };
 
   const renderForm = () => (
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Ngày nghỉ <span className="text-red-500">*</span>
+          請假日期 <span className="text-red-500">*</span>
         </label>
         <Input
           type="date"
@@ -285,7 +285,7 @@ const LeaveRequestPage: React.FC = () => {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Loại nghỉ phép <span className="text-red-500">*</span>
+          請假類型 <span className="text-red-500">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -299,7 +299,7 @@ const LeaveRequestPage: React.FC = () => {
               }
               className="w-4 h-4 text-primary"
             />
-            <span>Cả ngày</span>
+            <span>全天</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -312,7 +312,7 @@ const LeaveRequestPage: React.FC = () => {
               }
               className="w-4 h-4 text-primary"
             />
-            <span>Nửa buổi sáng</span>
+            <span>上午半天</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -325,14 +325,14 @@ const LeaveRequestPage: React.FC = () => {
               }
               className="w-4 h-4 text-primary"
             />
-            <span>Nửa buổi chiều</span>
+            <span>下午半天</span>
           </label>
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Lý do nghỉ phép <span className="text-red-500">*</span>
+          請假理由 <span className="text-red-500">*</span>
         </label>
         <textarea
           value={formData.reason}
@@ -340,13 +340,13 @@ const LeaveRequestPage: React.FC = () => {
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           rows={4}
           required
-          placeholder="Nhập lý do nghỉ phép..."
+          placeholder="輸入請假理由..."
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nhân viên hỗ trợ (tùy chọn)
+          代理人（選填）
         </label>
         <div className="relative employee-select-container">
           <div
@@ -354,7 +354,7 @@ const LeaveRequestPage: React.FC = () => {
             onClick={() => setShowEmployeeSelect(!showEmployeeSelect)}
           >
             {selectedEmployees.length === 0 ? (
-              <span className="text-gray-500 text-sm">Chọn nhân viên hỗ trợ...</span>
+              <span className="text-gray-500 text-sm">選擇代理人...</span>
             ) : (
               selectedEmployees.map((empId) => {
                 const emp = employees.find((e) => e.id === empId);
@@ -404,17 +404,17 @@ const LeaveRequestPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Xin nghỉ phép</h1>
-              <p className="text-sm text-gray-600">Xin chào, {user?.name}!</p>
+              <h1 className="text-2xl font-bold text-gray-900">請假單申請</h1>
+              <p className="text-sm text-gray-600">你好，{user?.name}!</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate('/attendance')}>
                 <Clock className="w-4 h-4 mr-2" />
-                Chấm công
+                考勤
               </Button>
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
-                Đăng xuất
+                登出
               </Button>
             </div>
           </div>
@@ -424,23 +424,23 @@ const LeaveRequestPage: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Danh sách đơn nghỉ phép</h2>
+          <h2 className="text-xl font-semibold text-gray-900">請假單列表</h2>
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" />
-            Tạo đơn nghỉ phép
+            建立請假單
           </Button>
         </div>
 
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-2 text-gray-600">Đang tải...</p>
+            <p className="mt-2 text-gray-600">載入中...</p>
           </div>
         ) : leaveRequests.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Chưa có đơn nghỉ phép nào</p>
+              <p className="text-gray-600">尚無請假單</p>
             </CardContent>
           </Card>
         ) : (
@@ -465,12 +465,12 @@ const LeaveRequestPage: React.FC = () => {
                             <span>{getLeaveTypeText(request.leaveType)}</span>
                           </div>
                           <div>
-                            <strong>Lý do:</strong> {request.reason}
+                            <strong>理由：</strong> {request.reason}
                           </div>
                           {supportingStaff.length > 0 && (
                             <div className="flex items-center gap-2 flex-wrap mt-2">
                               <User className="w-4 h-4" />
-                              <span className="font-medium">Nhân viên hỗ trợ:</span>
+                              <span className="font-medium">代理人：</span>
                               {supportingStaff.map((name, idx) => (
                                 <Badge key={idx} variant="outline">
                                   {name}
@@ -482,7 +482,7 @@ const LeaveRequestPage: React.FC = () => {
                             <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
                               <div className="flex items-center gap-2 text-red-700">
                                 <AlertCircle className="w-4 h-4" />
-                                <strong>Lý do từ chối:</strong>
+                                <strong>拒絕理由：</strong>
                               </div>
                               <p className="text-red-600 mt-1">{request.rejectionReason}</p>
                             </div>
@@ -490,11 +490,10 @@ const LeaveRequestPage: React.FC = () => {
                           {request.reviewedBy &&
                             typeof request.reviewedBy !== 'string' && (
                               <div className="text-xs text-gray-500 mt-2">
-                                Đã {request.status === 'approved' ? 'duyệt' : 'từ chối'} bởi:{' '}
-                                {request.reviewedBy.name} vào{' '}
+                                由 {request.reviewedBy.name} 於{' '}
                                 {request.reviewedAt
                                   ? formatDate(new Date(request.reviewedAt))
-                                  : ''}
+                                  : ''} {request.status === 'approved' ? '批准' : '拒絕'}
                               </div>
                             )}
                         </div>
@@ -507,7 +506,7 @@ const LeaveRequestPage: React.FC = () => {
                             onClick={() => handleEdit(request)}
                           >
                             <Edit className="w-4 h-4 mr-1" />
-                            Sửa
+                            修改
                           </Button>
                           <Button
                             variant="destructive"
@@ -515,7 +514,7 @@ const LeaveRequestPage: React.FC = () => {
                             onClick={() => handleDelete(request)}
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
-                            Xóa
+                            刪除
                           </Button>
                         </div>
                       )}
@@ -535,17 +534,17 @@ const LeaveRequestPage: React.FC = () => {
               onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
               disabled={pagination.page === 1}
             >
-              Trước
+              上一頁
             </Button>
             <span className="px-4 py-2 text-sm text-gray-600">
-              Trang {pagination.page} / {pagination.pages}
+              第 {pagination.page} / {pagination.pages} 頁
             </span>
             <Button
               variant="outline"
               onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
               disabled={pagination.page === pagination.pages}
             >
-              Sau
+              下一頁
             </Button>
           </div>
         )}
@@ -555,18 +554,18 @@ const LeaveRequestPage: React.FC = () => {
       <Dialog
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
-        title="Tạo đơn nghỉ phép"
+        title="建立請假單"
         onConfirm={handleSubmitCreate}
-        confirmText="Tạo đơn"
+        confirmText="建立"
         showActions={false}
       >
         {renderForm()}
         <div className="flex justify-end gap-3 mt-6">
           <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-            Hủy
+            取消
           </Button>
           <Button onClick={handleSubmitCreate} disabled={actionLoading}>
-            {actionLoading ? 'Đang xử lý...' : 'Tạo đơn'}
+            {actionLoading ? '處理中...' : '建立'}
           </Button>
         </div>
       </Dialog>
@@ -578,7 +577,7 @@ const LeaveRequestPage: React.FC = () => {
           setShowEditDialog(false);
           setSelectedRequest(null);
         }}
-        title="Sửa đơn nghỉ phép"
+        title="修改請假單"
         showActions={false}
       >
         {renderForm()}
@@ -590,10 +589,10 @@ const LeaveRequestPage: React.FC = () => {
               setSelectedRequest(null);
             }}
           >
-            Hủy
+            取消
           </Button>
           <Button onClick={handleSubmitEdit} disabled={actionLoading}>
-            {actionLoading ? 'Đang xử lý...' : 'Cập nhật'}
+            {actionLoading ? '處理中...' : '更新'}
           </Button>
         </div>
       </Dialog>
@@ -605,12 +604,12 @@ const LeaveRequestPage: React.FC = () => {
           setShowDeleteDialog(false);
           setSelectedRequest(null);
         }}
-        title="Xóa đơn nghỉ phép"
-        description="Bạn có chắc chắn muốn xóa đơn nghỉ phép này?"
+        title="刪除請假單"
+        description="您確定要刪除此請假單嗎？"
         variant="danger"
         onConfirm={handleConfirmDelete}
-        confirmText="Xóa"
-        cancelText="Hủy"
+        confirmText="刪除"
+        cancelText="取消"
       />
     </div>
   );

@@ -93,7 +93,7 @@ const AdminLeaveRequestPage: React.FC = () => {
       setPagination(response.data.pagination);
     } catch (error: any) {
       console.error('Error fetching leave requests:', error);
-      toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '載入請假單列表時發生錯誤');
     } finally {
       setLoading(false);
     }
@@ -118,12 +118,12 @@ const AdminLeaveRequestPage: React.FC = () => {
       await axios.patch<ApiResponse<LeaveRequest>>(
         `/admin/leave-requests/${selectedRequest._id}/approve`
       );
-      toast.success('Duyệt đơn nghỉ phép thành công');
+      toast.success('批准請假單成功');
       setShowApproveDialog(false);
       setSelectedRequest(null);
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi duyệt đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '批准請假單時發生錯誤');
     } finally {
       setActionLoading(false);
     }
@@ -131,7 +131,7 @@ const AdminLeaveRequestPage: React.FC = () => {
 
   const handleConfirmReject = async () => {
     if (!selectedRequest || !rejectionReason.trim()) {
-      toast.error('Vui lòng nhập lý do từ chối');
+      toast.error('請輸入拒絕理由');
       return;
     }
 
@@ -141,13 +141,13 @@ const AdminLeaveRequestPage: React.FC = () => {
         `/admin/leave-requests/${selectedRequest._id}/reject`,
         { rejectionReason }
       );
-      toast.success('Từ chối đơn nghỉ phép thành công');
+      toast.success('拒絕請假單成功');
       setShowRejectDialog(false);
       setSelectedRequest(null);
       setRejectionReason('');
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi từ chối đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '拒絕請假單時發生錯誤');
     } finally {
       setActionLoading(false);
     }
@@ -156,11 +156,11 @@ const AdminLeaveRequestPage: React.FC = () => {
   const getStatusBadge = (status: LeaveRequest['status']) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="warning">Chờ duyệt</Badge>;
+        return <Badge variant="warning">待審核</Badge>;
       case 'approved':
-        return <Badge variant="success">Đã duyệt</Badge>;
+        return <Badge variant="success">已批准</Badge>;
       case 'rejected':
-        return <Badge variant="destructive">Đã từ chối</Badge>;
+        return <Badge variant="destructive">已拒絕</Badge>;
       default:
         return null;
     }
@@ -169,11 +169,11 @@ const AdminLeaveRequestPage: React.FC = () => {
   const getLeaveTypeText = (type: LeaveRequest['leaveType']) => {
     switch (type) {
       case 'half-day-morning':
-        return 'Nửa buổi sáng';
+        return '上午半天';
       case 'half-day-afternoon':
-        return 'Nửa buổi chiều';
+        return '下午半天';
       case 'full-day':
-        return 'Cả ngày';
+        return '全天';
       default:
         return type;
     }
@@ -189,7 +189,7 @@ const AdminLeaveRequestPage: React.FC = () => {
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
-    toast.success('Đã đăng xuất');
+    toast.success('已登出');
   };
 
   const stats = {
@@ -205,8 +205,8 @@ const AdminLeaveRequestPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Quản lý đơn nghỉ phép</h1>
-              <p className="text-sm text-gray-600">Xin chào, {user?.name}!</p>
+              <h1 className="text-2xl font-bold text-gray-900">請假單管理</h1>
+              <p className="text-sm text-gray-600">你好，{user?.name}!</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate('/admin')}>
@@ -214,7 +214,7 @@ const AdminLeaveRequestPage: React.FC = () => {
               </Button>
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
-                Đăng xuất
+                登出
               </Button>
             </div>
           </div>
@@ -229,7 +229,7 @@ const AdminLeaveRequestPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Chờ duyệt</p>
+                  <p className="text-sm text-gray-600">待審核</p>
                   <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
                 </div>
                 <AlertCircle className="w-8 h-8 text-yellow-600" />
@@ -240,7 +240,7 @@ const AdminLeaveRequestPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Đã duyệt</p>
+                  <p className="text-sm text-gray-600">已批准</p>
                   <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
@@ -251,7 +251,7 @@ const AdminLeaveRequestPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Đã từ chối</p>
+                  <p className="text-sm text-gray-600">已拒絕</p>
                   <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
                 </div>
                 <XCircle className="w-8 h-8 text-red-600" />
@@ -265,14 +265,14 @@ const AdminLeaveRequestPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="w-5 h-5" />
-              Bộ lọc
+              篩選
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Trạng thái
+                  狀態
                 </label>
                 <select
                   value={filters.status}
@@ -282,15 +282,15 @@ const AdminLeaveRequestPage: React.FC = () => {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="">Tất cả</option>
-                  <option value="pending">Chờ duyệt</option>
-                  <option value="approved">Đã duyệt</option>
-                  <option value="rejected">Đã từ chối</option>
+                  <option value="">全部</option>
+                  <option value="pending">待審核</option>
+                  <option value="approved">已批准</option>
+                  <option value="rejected">已拒絕</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Từ ngày
+                  從
                 </label>
                 <Input
                   type="date"
@@ -303,7 +303,7 @@ const AdminLeaveRequestPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Đến ngày
+                  至
                 </label>
                 <Input
                   type="date"
@@ -323,7 +323,7 @@ const AdminLeaveRequestPage: React.FC = () => {
                   }}
                   className="w-full"
                 >
-                  Xóa bộ lọc
+                  清除篩選
                 </Button>
               </div>
             </div>
@@ -334,13 +334,13 @@ const AdminLeaveRequestPage: React.FC = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-2 text-gray-600">Đang tải...</p>
+            <p className="mt-2 text-gray-600">載入中...</p>
           </div>
         ) : leaveRequests.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Không có đơn nghỉ phép nào</p>
+              <p className="text-gray-600">無請假單</p>
             </CardContent>
           </Card>
         ) : (
@@ -376,12 +376,12 @@ const AdminLeaveRequestPage: React.FC = () => {
                             <span>{getLeaveTypeText(request.leaveType)}</span>
                           </div>
                           <div>
-                            <strong>Lý do:</strong> {request.reason}
+                            <strong>理由：</strong> {request.reason}
                           </div>
                           {supportingStaff.length > 0 && (
                             <div className="flex items-center gap-2 flex-wrap mt-2">
                               <User className="w-4 h-4" />
-                              <span className="font-medium">Nhân viên hỗ trợ:</span>
+                              <span className="font-medium">代理人：</span>
                               {supportingStaff.map((name, idx) => (
                                 <Badge key={idx} variant="outline">
                                   {name}
@@ -393,7 +393,7 @@ const AdminLeaveRequestPage: React.FC = () => {
                             <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
                               <div className="flex items-center gap-2 text-red-700">
                                 <AlertCircle className="w-4 h-4" />
-                                <strong>Lý do từ chối:</strong>
+                                <strong>拒絕理由：</strong>
                               </div>
                               <p className="text-red-600 mt-1">{request.rejectionReason}</p>
                             </div>
@@ -401,15 +401,14 @@ const AdminLeaveRequestPage: React.FC = () => {
                           {request.reviewedBy &&
                             typeof request.reviewedBy !== 'string' && (
                               <div className="text-xs text-gray-500 mt-2">
-                                Đã {request.status === 'approved' ? 'duyệt' : 'từ chối'} bởi:{' '}
-                                {request.reviewedBy.name} vào{' '}
+                                由 {request.reviewedBy.name} 於{' '}
                                 {request.reviewedAt
                                   ? formatDate(new Date(request.reviewedAt))
-                                  : ''}
+                                  : ''} {request.status === 'approved' ? '批准' : '拒絕'}
                               </div>
                             )}
                           <div className="text-xs text-gray-400 mt-2">
-                            Tạo lúc: {formatDate(new Date(request.createdAt))}
+                            建立時間：{formatDate(new Date(request.createdAt))}
                           </div>
                         </div>
                       </div>
@@ -421,7 +420,7 @@ const AdminLeaveRequestPage: React.FC = () => {
                             onClick={() => handleApprove(request)}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            Duyệt
+                            批准
                           </Button>
                           <Button
                             variant="destructive"
@@ -429,7 +428,7 @@ const AdminLeaveRequestPage: React.FC = () => {
                             onClick={() => handleReject(request)}
                           >
                             <XCircle className="w-4 h-4 mr-1" />
-                            Từ chối
+                            拒絕
                           </Button>
                         </div>
                       )}
@@ -449,17 +448,17 @@ const AdminLeaveRequestPage: React.FC = () => {
               onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
               disabled={pagination.page === 1}
             >
-              Trước
+              上一頁
             </Button>
             <span className="px-4 py-2 text-sm text-gray-600">
-              Trang {pagination.page} / {pagination.pages}
+              第 {pagination.page} / {pagination.pages} 頁
             </span>
             <Button
               variant="outline"
               onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
               disabled={pagination.page === pagination.pages}
             >
-              Sau
+              下一頁
             </Button>
           </div>
         )}
@@ -472,12 +471,12 @@ const AdminLeaveRequestPage: React.FC = () => {
           setShowApproveDialog(false);
           setSelectedRequest(null);
         }}
-        title="Duyệt đơn nghỉ phép"
-        description="Bạn có chắc chắn muốn duyệt đơn nghỉ phép này?"
+        title="批准請假單"
+        description="您確定要批准此請假單嗎？"
         variant="default"
         onConfirm={handleConfirmApprove}
-        confirmText="Duyệt"
-        cancelText="Hủy"
+        confirmText="批准"
+        cancelText="取消"
       />
 
       {/* Reject Dialog */}
@@ -488,14 +487,14 @@ const AdminLeaveRequestPage: React.FC = () => {
           setSelectedRequest(null);
           setRejectionReason('');
         }}
-        title="Từ chối đơn nghỉ phép"
+        title="拒絕請假單"
         variant="danger"
         showActions={false}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Lý do từ chối <span className="text-red-500">*</span>
+              拒絕理由 <span className="text-red-500">*</span>
             </label>
             <textarea
               value={rejectionReason}
@@ -503,7 +502,7 @@ const AdminLeaveRequestPage: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               rows={4}
               required
-              placeholder="Nhập lý do từ chối..."
+              placeholder="輸入拒絕理由..."
             />
           </div>
         </div>
@@ -516,14 +515,14 @@ const AdminLeaveRequestPage: React.FC = () => {
               setRejectionReason('');
             }}
           >
-            Hủy
+            取消
           </Button>
           <Button
             variant="destructive"
             onClick={handleConfirmReject}
             disabled={actionLoading || !rejectionReason.trim()}
           >
-            {actionLoading ? 'Đang xử lý...' : 'Từ chối'}
+            {actionLoading ? '處理中...' : '拒絕'}
           </Button>
         </div>
       </Dialog>

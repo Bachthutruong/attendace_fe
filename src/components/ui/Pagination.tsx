@@ -28,7 +28,7 @@ const Pagination: React.FC<PaginationProps> = ({
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
       {/* Page size selector */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-700">Hiển thị:</span>
+        <span className="text-sm text-gray-700">顯示：</span>
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}

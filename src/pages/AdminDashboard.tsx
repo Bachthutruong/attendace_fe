@@ -70,6 +70,7 @@ const AdminDashboard: React.FC = () => {
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [newIP, setNewIP] = useState('');
+  const [currentIP, setCurrentIP] = useState<string>('');
 
   // Pagination for employees
   const [employeePage, setEmployeePage] = useState(1);
@@ -160,6 +161,7 @@ const AdminDashboard: React.FC = () => {
       fetchAllAttendances();
     } else if (activeTab === 'settings') {
       fetchSettings();
+      fetchCurrentIP();
     } else if (activeTab === 'leave-requests') {
       fetchLeaveRequests();
     }
@@ -200,7 +202,7 @@ const AdminDashboard: React.FC = () => {
       setEmployeeTotalPages(response.data.pagination.pages);
       setEmployeeTotalItems(response.data.pagination.total);
     } catch (error: any) {
-      toast.error('Lỗi khi tải danh sách nhân viên');
+      toast.error('載入員工列表時發生錯誤');
     } finally {
       setLoading(false);
     }
@@ -245,7 +247,7 @@ const AdminDashboard: React.FC = () => {
       setAttendanceTotalItems(response.data.pagination.total);
     } catch (error: any) {
       console.error('Error fetching attendances:', error);
-      toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách chấm công');
+      toast.error(error.response?.data?.message || '載入考勤列表時發生錯誤');
     } finally {
       setLoading(false);
     }
@@ -256,7 +258,7 @@ const AdminDashboard: React.FC = () => {
       const response = await axios.get<ApiResponse<Attendance>>(`/admin/attendances/${id}`);
       setSelectedAttendance(response.data.data!);
     } catch (error: any) {
-      toast.error('Lỗi khi tải chi tiết chấm công');
+      toast.error('載入考勤詳情時發生錯誤');
     }
   };
 
@@ -265,7 +267,7 @@ const AdminDashboard: React.FC = () => {
     setApprovalAction({
       id: attendance._id,
       status,
-      employeeName: user?.name || 'Nhân viên',
+      employeeName: user?.name || '員工',
       employeeCode: user?.employeeCode || '',
     });
     setShowApprovalDialog(true);
@@ -276,7 +278,7 @@ const AdminDashboard: React.FC = () => {
 
     try {
       await axios.patch(`/admin/attendances/${approvalAction.id}/status`, { status: approvalAction.status });
-      toast.success(approvalAction.status === 'completed' ? 'Đã phê duyệt chấm công' : 'Đã từ chối chấm công');
+      toast.success(approvalAction.status === 'completed' ? '已批准考勤' : '已拒絕考勤');
       setShowApprovalDialog(false);
       setApprovalAction(null);
       fetchTodayAttendances();
@@ -285,7 +287,7 @@ const AdminDashboard: React.FC = () => {
         fetchAttendanceDetail(approvalAction.id);
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || '發生錯誤');
     }
   };
 
@@ -314,6 +316,17 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchCurrentIP = async () => {
+    try {
+      const response = await axios.get<ApiResponse<{ currentIp: string }>>('/admin/current-ip');
+      if (response.data.data) {
+        setCurrentIP(response.data.data.currentIp);
+      }
+    } catch (error: any) {
+      console.error('Error fetching current IP:', error);
+    }
+  };
+
   const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -323,9 +336,9 @@ const AdminDashboard: React.FC = () => {
         defaultCheckOutTime: settings.defaultCheckOutTime || undefined,
         allowedIPs: settings.allowedIPs,
       });
-      toast.success('Cập nhật cài đặt thành công');
+      toast.success('設定更新成功');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || '發生錯誤');
     } finally {
       setSettingsLoading(false);
     }
@@ -339,7 +352,21 @@ const AdminDashboard: React.FC = () => {
       });
       setNewIP('');
     } else if (settings.allowedIPs.includes(newIP.trim())) {
-      toast.error('IP này đã tồn tại trong danh sách');
+      toast.error('此 IP 已在列表中');
+    }
+  };
+
+  const handleAddCurrentIP = () => {
+    if (currentIP && currentIP !== 'unknown' && !settings.allowedIPs.includes(currentIP)) {
+      setSettings({
+        ...settings,
+        allowedIPs: [...settings.allowedIPs, currentIP],
+      });
+      toast.success(`已新增 IP ${currentIP} 到列表中`);
+    } else if (settings.allowedIPs.includes(currentIP)) {
+      toast.error('目前的 IP 已在列表中');
+    } else if (!currentIP || currentIP === 'unknown') {
+      toast.error('無法取得目前的 IP');
     }
   };
 
@@ -387,7 +414,7 @@ const AdminDashboard: React.FC = () => {
       setLeaveRequestPagination(response.data.pagination);
     } catch (error: any) {
       console.error('Error fetching leave requests:', error);
-      toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '載入請假單列表時發生錯誤');
     } finally {
       setLeaveRequestLoading(false);
     }
@@ -417,12 +444,12 @@ const AdminDashboard: React.FC = () => {
       await axios.patch<ApiResponse<LeaveRequest>>(
         `/admin/leave-requests/${selectedLeaveRequest._id}/approve`
       );
-      toast.success('Duyệt đơn nghỉ phép thành công');
+      toast.success('批准請假單成功');
       setShowApproveDialog(false);
       setSelectedLeaveRequest(null);
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi duyệt đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '批准請假單時發生錯誤');
     } finally {
       setLeaveRequestActionLoading(false);
     }
@@ -430,7 +457,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleConfirmReject = async () => {
     if (!selectedLeaveRequest || !rejectionReason.trim()) {
-      toast.error('Vui lòng nhập lý do từ chối');
+      toast.error('請輸入拒絕理由');
       return;
     }
 
@@ -440,13 +467,13 @@ const AdminDashboard: React.FC = () => {
         `/admin/leave-requests/${selectedLeaveRequest._id}/reject`,
         { rejectionReason }
       );
-      toast.success('Từ chối đơn nghỉ phép thành công');
+      toast.success('拒絕請假單成功');
       setShowRejectDialog(false);
       setSelectedLeaveRequest(null);
       setRejectionReason('');
       fetchLeaveRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi từ chối đơn nghỉ phép');
+      toast.error(error.response?.data?.message || '拒絕請假單時發生錯誤');
     } finally {
       setLeaveRequestActionLoading(false);
     }
@@ -455,11 +482,11 @@ const AdminDashboard: React.FC = () => {
   const getLeaveRequestStatusBadge = (status: LeaveRequest['status']) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="warning">Chờ duyệt</Badge>;
+        return <Badge variant="warning">待審核</Badge>;
       case 'approved':
-        return <Badge variant="success">Đã duyệt</Badge>;
+        return <Badge variant="success">已批准</Badge>;
       case 'rejected':
-        return <Badge variant="destructive">Đã từ chối</Badge>;
+        return <Badge variant="destructive">已拒絕</Badge>;
       default:
         return null;
     }
@@ -468,11 +495,11 @@ const AdminDashboard: React.FC = () => {
   const getLeaveTypeText = (type: LeaveRequest['leaveType']) => {
     switch (type) {
       case 'half-day-morning':
-        return 'Nửa buổi sáng';
+        return '上午半天';
       case 'half-day-afternoon':
-        return 'Nửa buổi chiều';
+        return '下午半天';
       case 'full-day':
-        return 'Cả ngày';
+        return '全天';
       default:
         return type;
     }
@@ -503,10 +530,10 @@ const AdminDashboard: React.FC = () => {
 
       if (editingEmployee) {
         await axios.put(`/admin/users/${editingEmployee.id}`, formData);
-        toast.success('Cập nhật nhân viên thành công');
+        toast.success('更新員工成功');
       } else {
         await axios.post('/admin/users', formData);
-        toast.success('Tạo nhân viên thành công');
+        toast.success('建立員工成功');
       }
       setShowEmployeeForm(false);
       setEditingEmployee(null);
@@ -521,7 +548,7 @@ const AdminDashboard: React.FC = () => {
       });
       fetchEmployees();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || '發生錯誤');
     }
   };
 
@@ -540,14 +567,14 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteEmployee = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) return;
+    if (!confirm('您確定要刪除此員工嗎？')) return;
 
     try {
       await axios.delete(`/admin/users/${id}`);
-      toast.success('Xóa nhân viên thành công');
+      toast.success('刪除員工成功');
       fetchEmployees();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || '發生錯誤');
     }
   };
 
@@ -564,16 +591,16 @@ const AdminDashboard: React.FC = () => {
     try {
       await axios.patch('/admin/notifications/read-all');
       fetchNotifications();
-      toast.success('Đã đánh dấu tất cả thông báo là đã đọc');
+      toast.success('已標記所有通知為已讀');
     } catch (error: any) {
-      toast.error('Có lỗi xảy ra');
+      toast.error('發生錯誤');
     }
   };
 
   const handleLogout = () => {
     dispatch(logout());
     navigate('/login');
-    toast.success('Đã đăng xuất');
+    toast.success('已登出');
   };
 
   const handleResetFilters = () => {
@@ -590,18 +617,18 @@ const AdminDashboard: React.FC = () => {
   };
 
   const months = [
-    { value: '1', label: 'Tháng 1' },
-    { value: '2', label: 'Tháng 2' },
-    { value: '3', label: 'Tháng 3' },
-    { value: '4', label: 'Tháng 4' },
-    { value: '5', label: 'Tháng 5' },
-    { value: '6', label: 'Tháng 6' },
-    { value: '7', label: 'Tháng 7' },
-    { value: '8', label: 'Tháng 8' },
-    { value: '9', label: 'Tháng 9' },
-    { value: '10', label: 'Tháng 10' },
-    { value: '11', label: 'Tháng 11' },
-    { value: '12', label: 'Tháng 12' },
+    { value: '1', label: '1月' },
+    { value: '2', label: '2月' },
+    { value: '3', label: '3月' },
+    { value: '4', label: '4月' },
+    { value: '5', label: '5月' },
+    { value: '6', label: '6月' },
+    { value: '7', label: '7月' },
+    { value: '8', label: '8月' },
+    { value: '9', label: '9月' },
+    { value: '10', label: '10月' },
+    { value: '11', label: '11月' },
+    { value: '12', label: '12月' },
   ];
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
@@ -613,8 +640,8 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Quản trị viên</h1>
-              <p className="text-sm text-gray-600">Xin chào, {currentUser?.name}!</p>
+              <h1 className="text-2xl font-bold text-gray-900">管理員</h1>
+              <p className="text-sm text-gray-600">你好，{currentUser?.name}!</p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -633,7 +660,7 @@ const AdminDashboard: React.FC = () => {
               </button>
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
-                Đăng xuất
+                登出
               </Button>
             </div>
           </div>
@@ -645,12 +672,12 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
             {[
-              { id: 'dashboard' as TabType, label: 'Tổng quan', icon: BarChart3 },
-              { id: 'employees' as TabType, label: 'Nhân viên', icon: Users },
-              { id: 'attendances' as TabType, label: 'Chấm công', icon: Calendar },
-              { id: 'leave-requests' as TabType, label: 'Đơn nghỉ phép', icon: FileText },
-              { id: 'notifications' as TabType, label: 'Thông báo', icon: Bell },
-              { id: 'settings' as TabType, label: 'Cài đặt', icon: Settings },
+              { id: 'dashboard' as TabType, label: '總覽', icon: BarChart3 },
+              { id: 'employees' as TabType, label: '員工', icon: Users },
+              { id: 'attendances' as TabType, label: '考勤', icon: Calendar },
+              { id: 'leave-requests' as TabType, label: '請假單', icon: FileText },
+              { id: 'notifications' as TabType, label: '通知', icon: Bell },
+              { id: 'settings' as TabType, label: '設定', icon: Settings },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -683,7 +710,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Tổng nhân viên</p>
+                      <p className="text-sm text-gray-600">員工總數</p>
                       <p className="text-3xl font-bold text-gray-900">{todayData.stats.total}</p>
                     </div>
                     <Users className="w-12 h-12 text-blue-500 opacity-50" />
@@ -695,7 +722,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Đã chấm công</p>
+                      <p className="text-sm text-gray-600">已打卡</p>
                       <p className="text-3xl font-bold text-green-600">{todayData.stats.present}</p>
                     </div>
                     <CheckCircle className="w-12 h-12 text-green-500 opacity-50" />
@@ -707,7 +734,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Vắng mặt</p>
+                      <p className="text-sm text-gray-600">缺勤</p>
                       <p className="text-3xl font-bold text-red-600">{todayData.stats.absent}</p>
                     </div>
                     <Clock className="w-12 h-12 text-red-500 opacity-50" />
@@ -719,7 +746,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Cảnh báo</p>
+                      <p className="text-sm text-gray-600">警告</p>
                       <p className="text-3xl font-bold text-yellow-600">{todayData.stats.withAlerts}</p>
                     </div>
                     <AlertTriangle className="w-12 h-12 text-yellow-500 opacity-50" />
@@ -731,18 +758,18 @@ const AdminDashboard: React.FC = () => {
             {/* Today's Attendances */}
             <Card>
               <CardHeader>
-                <CardTitle>Chấm công hôm nay - {formatDate(new Date())}</CardTitle>
+                <CardTitle>今日考勤 - {formatDate(new Date())}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Mã NV</TableHead>
-                      <TableHead>Nhân viên</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Giờ làm</TableHead>
-                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>員工編號</TableHead>
+                      <TableHead>員工</TableHead>
+                      <TableHead>上班打卡</TableHead>
+                      <TableHead>下班打卡</TableHead>
+                      <TableHead>工時</TableHead>
+                      <TableHead>狀態</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -778,20 +805,20 @@ const AdminDashboard: React.FC = () => {
                               }
                             >
                               {attendance.status === 'completed'
-                                ? 'Đã phê duyệt'
+                                ? '已批准'
                                 : attendance.status === 'rejected'
-                                ? 'Đã từ chối'
+                                ? '已拒絕'
                                 : attendance.status === 'pending'
-                                ? 'Chờ duyệt'
-                                : 'Vắng'}
+                                ? '待審核'
+                                : '缺勤'}
                             </Badge>
                             {(attendance.hasDeviceAlert || attendance.hasIpAlert || attendance.hasTimeAlert) && (
                               <span 
                                 title={
                                   (attendance.hasTimeAlert 
-                                    ? attendance.timeAlertMessage || 'Cảnh báo thời gian'
-                                    : attendance.alertMessage || 'Có cảnh báo') +
-                                  (attendance.fraudReason ? `\n\nLý do: ${attendance.fraudReason}` : '')
+                                    ? attendance.timeAlertMessage || '時間警告'
+                                    : attendance.alertMessage || '有警告') +
+                                  (attendance.fraudReason ? `\n\n理由：${attendance.fraudReason}` : '')
                                 } 
                                 className="inline-flex"
                               >
@@ -806,7 +833,7 @@ const AdminDashboard: React.FC = () => {
                             )}
                             {attendance.fraudReason && (
                               <span 
-                                title={`Lý do: ${attendance.fraudReason}`}
+                                title={`理由：${attendance.fraudReason}`}
                                 className="inline-flex"
                               >
                                 <span className="text-xs text-blue-600" title={attendance.fraudReason}>
@@ -822,7 +849,7 @@ const AdminDashboard: React.FC = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => fetchAttendanceDetail(attendance._id)}
-                              title="Xem chi tiết"
+                              title="查看詳情"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -832,7 +859,7 @@ const AdminDashboard: React.FC = () => {
                                   size="sm"
                                   variant="default"
                                   onClick={() => handleApproveRejectClick(attendance, 'completed')}
-                                  title="Phê duyệt"
+                                  title="批准"
                                   className="bg-green-600 hover:bg-green-700"
                                 >
                                   <Check className="w-4 h-4" />
@@ -841,7 +868,7 @@ const AdminDashboard: React.FC = () => {
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => handleApproveRejectClick(attendance, 'rejected')}
-                                  title="Từ chối"
+                                  title="拒絕"
                                 >
                                   <X className="w-4 h-4" />
                                 </Button>
@@ -857,7 +884,7 @@ const AdminDashboard: React.FC = () => {
                 {todayData.absentEmployees.length > 0 && (
                   <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                     <p className="font-semibold text-red-900 mb-2">
-                      Nhân viên chưa chấm công ({todayData.absentEmployees.length}):
+                      未打卡員工 ({todayData.absentEmployees.length}):
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {todayData.absentEmployees.map((emp) => (
@@ -877,10 +904,10 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'employees' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Quản lý nhân viên</h2>
+              <h2 className="text-2xl font-bold">員工管理</h2>
               <Button onClick={() => setShowEmployeeForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Thêm nhân viên
+                新增員工
               </Button>
             </div>
 
@@ -888,18 +915,18 @@ const AdminDashboard: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {editingEmployee ? 'Chỉnh sửa nhân viên' : 'Thêm nhân viên mới'}
+                    {editingEmployee ? '編輯員工' : '新增員工'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleCreateEmployee} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-2">Mã nhân viên</label>
+                        <label className="block text-sm font-medium mb-2">員工編號</label>
                         <input
                           type="text"
                           className="w-full px-3 py-2 border rounded-md uppercase"
-                          placeholder="VD: NV001"
+                          placeholder="例如：NV001"
                           value={employeeForm.employeeCode}
                           onChange={(e) =>
                             setEmployeeForm({ ...employeeForm, employeeCode: e.target.value.toUpperCase() })
@@ -908,7 +935,7 @@ const AdminDashboard: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Họ và tên</label>
+                        <label className="block text-sm font-medium mb-2">姓名</label>
                         <input
                           type="text"
                           className="w-full px-3 py-2 border rounded-md"
@@ -920,7 +947,7 @@ const AdminDashboard: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Email</label>
+                        <label className="block text-sm font-medium mb-2">電子郵件</label>
                         <input
                           type="email"
                           className="w-full px-3 py-2 border rounded-md"
@@ -933,7 +960,7 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       {!editingEmployee && (
                         <div>
-                          <label className="block text-sm font-medium mb-2">Mật khẩu</label>
+                          <label className="block text-sm font-medium mb-2">密碼</label>
                           <input
                             type="password"
                             className="w-full px-3 py-2 border rounded-md"
@@ -946,7 +973,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                       )}
                       <div>
-                        <label className="block text-sm font-medium mb-2">Vai trò</label>
+                        <label className="block text-sm font-medium mb-2">角色</label>
                         <select
                           className="w-full px-3 py-2 border rounded-md"
                           value={employeeForm.role}
@@ -957,22 +984,22 @@ const AdminDashboard: React.FC = () => {
                             })
                           }
                         >
-                          <option value="employee">Nhân viên</option>
-                          <option value="admin">Quản trị viên</option>
+                          <option value="employee">員工</option>
+                          <option value="admin">管理員</option>
                         </select>
                       </div>
                     </div>
                     
                     {/* Custom Time Settings Section */}
                     <div className="border-t pt-4 mt-4">
-                      <h3 className="text-lg font-semibold mb-4">Cài đặt thời gian chấm công riêng</h3>
+                      <h3 className="text-lg font-semibold mb-4">設定個人考勤時間</h3>
                       <p className="text-sm text-gray-600 mb-4">
-                        Nếu không cài đặt, nhân viên sẽ sử dụng giờ mặc định từ cài đặt hệ thống.
+                        若未設定，將使用系統預設時間。
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium mb-2">
-                            Giờ check-in riêng (HH:mm)
+                            個人上班時間 (HH:mm)
                           </label>
                           <input
                             type="time"
@@ -981,13 +1008,13 @@ const AdminDashboard: React.FC = () => {
                             onChange={(e) =>
                               setEmployeeForm({ ...employeeForm, customCheckInTime: e.target.value })
                             }
-                            placeholder="VD: 09:00"
+                            placeholder="例如：09:00"
                           />
-                          <p className="text-xs text-gray-500 mt-1">Để trống nếu muốn dùng giờ mặc định</p>
+                          <p className="text-xs text-gray-500 mt-1">若使用預設時間請留空</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-2">
-                            Giờ check-out riêng (HH:mm)
+                            個人下班時間 (HH:mm)
                           </label>
                           <input
                             type="time"
@@ -996,16 +1023,16 @@ const AdminDashboard: React.FC = () => {
                             onChange={(e) =>
                               setEmployeeForm({ ...employeeForm, customCheckOutTime: e.target.value })
                             }
-                            placeholder="VD: 18:00"
+                            placeholder="例如：18:00"
                           />
-                          <p className="text-xs text-gray-500 mt-1">Để trống nếu muốn dùng giờ mặc định</p>
+                          <p className="text-xs text-gray-500 mt-1">若使用預設時間請留空</p>
                         </div>
                       </div>
                     </div>
                     
                     <div className="flex gap-2">
                       <Button type="submit">
-                        {editingEmployee ? 'Cập nhật' : 'Tạo mới'}
+                        {editingEmployee ? '更新' : '新增'}
                       </Button>
                       <Button
                         type="button"
@@ -1024,7 +1051,7 @@ const AdminDashboard: React.FC = () => {
                           });
                         }}
                       >
-                        Hủy
+                        取消
                       </Button>
                     </div>
                   </form>
@@ -1035,18 +1062,18 @@ const AdminDashboard: React.FC = () => {
             <Card>
               <CardContent className="pt-6">
                 {loading ? (
-                  <p className="text-center py-8">Đang tải...</p>
+                  <p className="text-center py-8">載入中...</p>
                 ) : (
                   <>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Mã NV</TableHead>
-                          <TableHead>Tên</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Vai trò</TableHead>
-                          <TableHead>Trạng thái</TableHead>
-                          <TableHead>Thao tác</TableHead>
+                          <TableHead>員工編號</TableHead>
+                          <TableHead>名稱</TableHead>
+                          <TableHead>電子郵件</TableHead>
+                          <TableHead>角色</TableHead>
+                          <TableHead>狀態</TableHead>
+                          <TableHead>操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1057,12 +1084,12 @@ const AdminDashboard: React.FC = () => {
                             <TableCell>{emp.email}</TableCell>
                             <TableCell>
                               <Badge variant={emp.role === 'admin' ? 'default' : 'secondary'}>
-                                {emp.role === 'admin' ? 'Admin' : 'Nhân viên'}
+                                {emp.role === 'admin' ? '管理員' : '員工'}
                               </Badge>
                             </TableCell>
                             <TableCell>
                               <Badge variant={emp.isActive ? 'success' : 'destructive'}>
-                                {emp.isActive ? 'Hoạt động' : 'Khóa'}
+                                {emp.isActive ? '啟用' : '停用'}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -1112,7 +1139,7 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'attendances' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Lịch sử chấm công</h2>
+              <h2 className="text-2xl font-bold">考勤記錄</h2>
             </div>
 
             {/* Filters */}
@@ -1120,13 +1147,13 @@ const AdminDashboard: React.FC = () => {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Filter className="w-5 h-5" />
-                  <CardTitle>Bộ lọc</CardTitle>
+                  <CardTitle>篩選</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Nhân viên</label>
+                    <label className="block text-sm font-medium mb-2">員工</label>
                     <select
                       className="w-full px-3 py-2 border rounded-md text-sm"
                       value={filters.userId}
@@ -1135,7 +1162,7 @@ const AdminDashboard: React.FC = () => {
                         setAttendancePage(1);
                       }}
                     >
-                      <option value="">Tất cả</option>
+                      <option value="">全部</option>
                       {allEmployees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
                           {emp.employeeCode} - {emp.name}
@@ -1145,7 +1172,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Tháng</label>
+                    <label className="block text-sm font-medium mb-2">月</label>
                     <select
                       className="w-full px-3 py-2 border rounded-md text-sm"
                       value={filters.month}
@@ -1154,7 +1181,7 @@ const AdminDashboard: React.FC = () => {
                         setAttendancePage(1);
                       }}
                     >
-                      <option value="">Tất cả</option>
+                      <option value="">全部</option>
                       {months.map((m) => (
                         <option key={m.value} value={m.value}>
                           {m.label}
@@ -1164,7 +1191,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Năm</label>
+                    <label className="block text-sm font-medium mb-2">年</label>
                     <select
                       className="w-full px-3 py-2 border rounded-md text-sm"
                       value={filters.year}
@@ -1182,7 +1209,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Từ ngày</label>
+                    <label className="block text-sm font-medium mb-2">從</label>
                     <input
                       type="date"
                       className="w-full px-3 py-2 border rounded-md text-sm"
@@ -1195,7 +1222,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Đến ngày</label>
+                    <label className="block text-sm font-medium mb-2">至</label>
                     <input
                       type="date"
                       className="w-full px-3 py-2 border rounded-md text-sm"
@@ -1208,7 +1235,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Trạng thái</label>
+                    <label className="block text-sm font-medium mb-2">狀態</label>
                     <select
                       className="w-full px-3 py-2 border rounded-md text-sm"
                       value={filters.status}
@@ -1217,16 +1244,16 @@ const AdminDashboard: React.FC = () => {
                         setAttendancePage(1);
                       }}
                     >
-                      <option value="">Tất cả</option>
-                      <option value="pending">Chờ duyệt</option>
-                      <option value="completed">Đã phê duyệt</option>
-                      <option value="rejected">Đã từ chối</option>
-                      <option value="absent">Vắng</option>
+                      <option value="">全部</option>
+                      <option value="pending">待審核</option>
+                      <option value="completed">已批准</option>
+                      <option value="rejected">已拒絕</option>
+                      <option value="absent">缺勤</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Cảnh báo</label>
+                    <label className="block text-sm font-medium mb-2">警告</label>
                     <select
                       className="w-full px-3 py-2 border rounded-md text-sm"
                       value={filters.hasAlert}
@@ -1235,16 +1262,16 @@ const AdminDashboard: React.FC = () => {
                         setAttendancePage(1);
                       }}
                     >
-                      <option value="">Tất cả</option>
-                      <option value="true">Có cảnh báo</option>
-                      <option value="false">Không có</option>
+                      <option value="">全部</option>
+                      <option value="true">有警告</option>
+                      <option value="false">無</option>
                     </select>
                   </div>
                 </div>
                 
                 <div className="mt-4">
                   <Button variant="outline" size="sm" onClick={handleResetFilters}>
-                    Đặt lại bộ lọc
+                    重置篩選
                   </Button>
                 </div>
               </CardContent>
@@ -1253,19 +1280,19 @@ const AdminDashboard: React.FC = () => {
             <Card>
               <CardContent className="pt-6">
                 {loading ? (
-                  <p className="text-center py-8">Đang tải...</p>
+                  <p className="text-center py-8">載入中...</p>
                 ) : (
                   <>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Mã NV</TableHead>
-                          <TableHead>Nhân viên</TableHead>
-                          <TableHead>Ngày</TableHead>
-                          <TableHead>Check-in</TableHead>
-                          <TableHead>Check-out</TableHead>
-                          <TableHead>Giờ làm</TableHead>
-                          <TableHead>Trạng thái</TableHead>
+                          <TableHead>員工編號</TableHead>
+                          <TableHead>員工</TableHead>
+                          <TableHead>日期</TableHead>
+                          <TableHead>上班打卡</TableHead>
+                          <TableHead>下班打卡</TableHead>
+                          <TableHead>工時</TableHead>
+                          <TableHead>狀態</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1302,20 +1329,20 @@ const AdminDashboard: React.FC = () => {
                                   }
                                 >
                                   {attendance.status === 'completed'
-                                    ? 'Đã phê duyệt'
+                                    ? '已批准'
                                     : attendance.status === 'rejected'
-                                    ? 'Đã từ chối'
+                                    ? '已拒絕'
                                     : attendance.status === 'pending'
-                                    ? 'Chờ duyệt'
-                                    : 'Vắng'}
+                                    ? '待審核'
+                                    : '缺勤'}
                                 </Badge>
                                 {(attendance.hasDeviceAlert || attendance.hasIpAlert || attendance.hasTimeAlert) && (
                                   <span 
                                     title={
                                       (attendance.hasTimeAlert 
-                                        ? attendance.timeAlertMessage || 'Cảnh báo thời gian'
-                                        : attendance.alertMessage || 'Có cảnh báo') +
-                                      (attendance.fraudReason ? `\n\nLý do: ${attendance.fraudReason}` : '')
+                                        ? attendance.timeAlertMessage || '時間警告'
+                                        : attendance.alertMessage || '有警告') +
+                                      (attendance.fraudReason ? `\n\n理由：${attendance.fraudReason}` : '')
                                     } 
                                     className="inline-flex"
                                   >
@@ -1330,7 +1357,7 @@ const AdminDashboard: React.FC = () => {
                                 )}
                                 {attendance.fraudReason && (
                                   <span 
-                                    title={`Lý do: ${attendance.fraudReason}`}
+                                    title={`理由：${attendance.fraudReason}`}
                                     className="inline-flex"
                                   >
                                     <span className="text-xs text-blue-600" title={attendance.fraudReason}>
@@ -1346,7 +1373,7 @@ const AdminDashboard: React.FC = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => fetchAttendanceDetail(attendance._id)}
-                                  title="Xem chi tiết"
+                                  title="查看詳情"
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
@@ -1356,7 +1383,7 @@ const AdminDashboard: React.FC = () => {
                                       size="sm"
                                       variant="default"
                                       onClick={() => handleApproveRejectClick(attendance, 'completed')}
-                                      title="Phê duyệt"
+                                      title="批准"
                                       className="bg-green-600 hover:bg-green-700"
                                     >
                                       <Check className="w-4 h-4" />
@@ -1365,7 +1392,7 @@ const AdminDashboard: React.FC = () => {
                                       size="sm"
                                       variant="destructive"
                                       onClick={() => handleApproveRejectClick(attendance, 'rejected')}
-                                      title="Từ chối"
+                                      title="拒絕"
                                     >
                                       <X className="w-4 h-4" />
                                     </Button>
@@ -1402,10 +1429,10 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'notifications' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Thông báo</h2>
+              <h2 className="text-2xl font-bold">通知</h2>
               {unreadCount > 0 && (
                 <Button variant="outline" onClick={handleMarkAllRead}>
-                  Đánh dấu tất cả đã đọc
+                  全部標記為已讀
                 </Button>
               )}
             </div>
@@ -1414,7 +1441,7 @@ const AdminDashboard: React.FC = () => {
               {notifications.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center text-gray-600">
-                    Không có thông báo
+                    無通知
                   </CardContent>
                 </Card>
               ) : (
@@ -1446,7 +1473,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                           <p className="text-sm text-gray-700">{notif.message}</p>
                           <p className="text-xs text-gray-500 mt-2">
-                            {new Date(notif.createdAt).toLocaleString('vi-VN')}
+                            {new Date(notif.createdAt).toLocaleString('zh-TW')}
                           </p>
                         </div>
                       </div>
@@ -1462,7 +1489,7 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'leave-requests' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Quản lý đơn nghỉ phép</h2>
+              <h2 className="text-2xl font-bold">請假單管理</h2>
             </div>
 
             {/* Stats */}
@@ -1471,7 +1498,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Chờ duyệt</p>
+                      <p className="text-sm text-gray-600">待審核</p>
                       <p className="text-2xl font-bold text-yellow-600">
                         {leaveRequests.filter((r) => r.status === 'pending').length}
                       </p>
@@ -1484,7 +1511,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Đã duyệt</p>
+                      <p className="text-sm text-gray-600">已批准</p>
                       <p className="text-2xl font-bold text-green-600">
                         {leaveRequests.filter((r) => r.status === 'approved').length}
                       </p>
@@ -1497,7 +1524,7 @@ const AdminDashboard: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Đã từ chối</p>
+                      <p className="text-sm text-gray-600">已拒絕</p>
                       <p className="text-2xl font-bold text-red-600">
                         {leaveRequests.filter((r) => r.status === 'rejected').length}
                       </p>
@@ -1513,14 +1540,14 @@ const AdminDashboard: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Filter className="w-5 h-5" />
-                  Bộ lọc
+                  篩選
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Trạng thái
+                      狀態
                     </label>
                     <select
                       value={leaveRequestFilters.status}
@@ -1530,15 +1557,15 @@ const AdminDashboard: React.FC = () => {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="">Tất cả</option>
-                      <option value="pending">Chờ duyệt</option>
-                      <option value="approved">Đã duyệt</option>
-                      <option value="rejected">Đã từ chối</option>
+                      <option value="">全部</option>
+                      <option value="pending">待審核</option>
+                      <option value="approved">已批准</option>
+                      <option value="rejected">已拒絕</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Từ ngày
+                      從
                     </label>
                     <Input
                       type="date"
@@ -1551,7 +1578,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Đến ngày
+                      至
                     </label>
                     <Input
                       type="date"
@@ -1571,7 +1598,7 @@ const AdminDashboard: React.FC = () => {
                       }}
                       className="w-full"
                     >
-                      Xóa bộ lọc
+                      清除篩選
                     </Button>
                   </div>
                 </div>
@@ -1582,13 +1609,13 @@ const AdminDashboard: React.FC = () => {
             {leaveRequestLoading ? (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-2 text-gray-600">Đang tải...</p>
+                <p className="mt-2 text-gray-600">載入中...</p>
               </div>
             ) : leaveRequests.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Không có đơn nghỉ phép nào</p>
+                  <p className="text-gray-600">無請假單</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1624,12 +1651,12 @@ const AdminDashboard: React.FC = () => {
                                 <span>{getLeaveTypeText(request.leaveType)}</span>
                               </div>
                               <div>
-                                <strong>Lý do:</strong> {request.reason}
+                                <strong>理由：</strong> {request.reason}
                               </div>
                               {supportingStaff.length > 0 && (
                                 <div className="flex items-center gap-2 flex-wrap mt-2">
                                   <UserIcon className="w-4 h-4" />
-                                  <span className="font-medium">Nhân viên hỗ trợ:</span>
+                                  <span className="font-medium">代理人：</span>
                                   {supportingStaff.map((name, idx) => (
                                     <Badge key={idx} variant="outline">
                                       {name}
@@ -1641,7 +1668,7 @@ const AdminDashboard: React.FC = () => {
                                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
                                   <div className="flex items-center gap-2 text-red-700">
                                     <AlertCircle className="w-4 h-4" />
-                                    <strong>Lý do từ chối:</strong>
+                                    <strong>拒絕理由：</strong>
                                   </div>
                                   <p className="text-red-600 mt-1">{request.rejectionReason}</p>
                                 </div>
@@ -1649,15 +1676,14 @@ const AdminDashboard: React.FC = () => {
                               {request.reviewedBy &&
                                 typeof request.reviewedBy !== 'string' && (
                                   <div className="text-xs text-gray-500 mt-2">
-                                    Đã {request.status === 'approved' ? 'duyệt' : 'từ chối'} bởi:{' '}
-                                    {request.reviewedBy.name} vào{' '}
+                                    由 {request.reviewedBy.name} 於{' '}
                                     {request.reviewedAt
                                       ? formatDate(new Date(request.reviewedAt))
-                                      : ''}
+                                      : ''} {request.status === 'approved' ? '批准' : '拒絕'}
                                   </div>
                                 )}
                               <div className="text-xs text-gray-400 mt-2">
-                                Tạo lúc: {formatDate(new Date(request.createdAt))}
+                                建立時間：{formatDate(new Date(request.createdAt))}
                               </div>
                             </div>
                           </div>
@@ -1668,7 +1694,7 @@ const AdminDashboard: React.FC = () => {
                               onClick={() => handleViewLeaveRequestDetail(request)}
                             >
                               <Eye className="w-4 h-4 mr-1" />
-                              Chi tiết
+                              詳情
                             </Button>
                             {request.status === 'pending' && (
                               <>
@@ -1678,7 +1704,7 @@ const AdminDashboard: React.FC = () => {
                                   onClick={() => handleApproveLeaveRequest(request)}
                                 >
                                   <CheckCircle className="w-4 h-4 mr-1" />
-                                  Duyệt
+                                  批准
                                 </Button>
                                 <Button
                                   variant="destructive"
@@ -1686,7 +1712,7 @@ const AdminDashboard: React.FC = () => {
                                   onClick={() => handleRejectLeaveRequest(request)}
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
-                                  Từ chối
+                                  拒絕
                                 </Button>
                               </>
                             )}
@@ -1725,26 +1751,26 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Cài đặt hệ thống</h2>
+              <h2 className="text-2xl font-bold">系統設定</h2>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Cài đặt giờ chấm công mặc định</CardTitle>
+                <CardTitle>設定預設考勤時間</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleUpdateSettings} className="space-y-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <p className="text-sm text-blue-800">
-                      <strong>Lưu ý:</strong> Cài đặt này sẽ áp dụng cho tất cả nhân viên nếu họ không có giờ chấm công riêng. 
-                      Bạn có thể cài đặt giờ riêng cho từng nhân viên trong phần chỉnh sửa nhân viên.
+                      <strong>注意：</strong> 此設定將適用於所有未設定個人考勤時間的員工。
+                      您可以在編輯員工時為個別員工設定專屬時間。
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        Giờ check-in mặc định (HH:mm)
+                        預設上班時間 (HH:mm)
                       </label>
                       <input
                         type="time"
@@ -1753,15 +1779,15 @@ const AdminDashboard: React.FC = () => {
                         onChange={(e) =>
                           setSettings({ ...settings, defaultCheckInTime: e.target.value })
                         }
-                        placeholder="VD: 08:00"
+                        placeholder="例如：08:00"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Giờ check-in mặc định cho tất cả nhân viên
+                        所有員工的預設上班時間
                       </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        Giờ check-out mặc định (HH:mm)
+                        預設下班時間 (HH:mm)
                       </label>
                       <input
                         type="time"
@@ -1770,24 +1796,24 @@ const AdminDashboard: React.FC = () => {
                         onChange={(e) =>
                           setSettings({ ...settings, defaultCheckOutTime: e.target.value })
                         }
-                        placeholder="VD: 17:00"
+                        placeholder="例如：17:00"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Giờ check-out mặc định cho tất cả nhân viên
+                        所有員工的預設下班時間
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-2 pt-4 border-t">
                     <Button type="submit" disabled={settingsLoading}>
-                      {settingsLoading ? 'Đang lưu...' : 'Lưu cài đặt'}
+                      {settingsLoading ? '儲存中...' : '儲存設定'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => fetchSettings()}
                     >
-                      Hủy
+                      取消
                     </Button>
                   </div>
                 </form>
@@ -1797,25 +1823,46 @@ const AdminDashboard: React.FC = () => {
             {/* IP Whitelist Management */}
             <Card>
               <CardHeader>
-                <CardTitle>Quản lý IP xác thực</CardTitle>
+                <CardTitle>IP 白名單管理</CardTitle>
                 <CardDescription>
-                  Thêm danh sách IP được phép check-in/check-out. Nếu danh sách trống, hệ thống sẽ không kiểm tra IP whitelist.
+                  新增允許打卡的 IP 列表。若列表為空，系統將不檢查 IP 白名單。
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                     <p className="text-sm text-blue-800">
-                      <strong>Lưu ý:</strong> Khi có danh sách IP xác thực, nhân viên chỉ có thể check-in/check-out từ các IP trong danh sách này. 
-                      Nếu check-in/check-out từ IP khác, hệ thống sẽ phát hiện gian lận và yêu cầu nhập lý do.
+                      <strong>注意：</strong> 啟用 IP 白名單後，員工只能從列表中的 IP 進行打卡。
+                      如果從其他 IP 打卡，系統將會偵測為異常並要求輸入理由。
                     </p>
                   </div>
+
+                  {/* Current IP Display */}
+                  {currentIP && currentIP !== 'unknown' && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-1">您目前的 IP：</p>
+                          <p className="font-mono text-lg text-gray-900">{currentIP}</p>
+                        </div>
+                        <Button 
+                          type="button" 
+                          onClick={handleAddCurrentIP}
+                          disabled={settings.allowedIPs.includes(currentIP)}
+                          variant={settings.allowedIPs.includes(currentIP) ? "outline" : "default"}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          {settings.allowedIPs.includes(currentIP) ? '已在列表中' : '新增 IP'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <input
                       type="text"
                       className="flex-1 px-3 py-2 border rounded-md"
-                      placeholder="Nhập IP (ví dụ: 192.168.1.1)"
+                      placeholder="輸入 IP (例如：192.168.1.1)"
                       value={newIP}
                       onChange={(e) => setNewIP(e.target.value)}
                       onKeyPress={(e) => {
@@ -1827,14 +1874,14 @@ const AdminDashboard: React.FC = () => {
                     />
                     <Button type="button" onClick={handleAddIP}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Thêm IP
+                      新增 IP
                     </Button>
                   </div>
 
                   {settings.allowedIPs.length > 0 ? (
                     <div className="border rounded-lg p-4">
                       <p className="text-sm font-medium text-gray-700 mb-3">
-                        Danh sách IP xác thực ({settings.allowedIPs.length}):
+                        IP 白名單 ({settings.allowedIPs.length}):
                       </p>
                       <div className="space-y-2">
                         {settings.allowedIPs.map((ip) => (
@@ -1856,9 +1903,9 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   ) : (
                     <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center">
-                      <p className="text-gray-500">Chưa có IP nào trong danh sách</p>
+                      <p className="text-gray-500">列表中無 IP</p>
                       <p className="text-sm text-gray-400 mt-1">
-                        Thêm IP để bắt đầu quản lý IP xác thực
+                        新增 IP 以開始管理白名單
                       </p>
                     </div>
                   )}
@@ -1884,16 +1931,16 @@ const AdminDashboard: React.FC = () => {
           setShowApprovalDialog(false);
           setApprovalAction(null);
         }}
-        title={approvalAction?.status === 'completed' ? 'Xác nhận phê duyệt' : 'Xác nhận từ chối'}
+        title={approvalAction?.status === 'completed' ? '確認批准' : '確認拒絕'}
         showActions={false}
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Bạn có chắc chắn muốn{' '}
+            您確定要{' '}
             <span className="font-semibold">
-              {approvalAction?.status === 'completed' ? 'phê duyệt' : 'từ chối'}
+              {approvalAction?.status === 'completed' ? '批准' : '拒絕'}
             </span>{' '}
-            chấm công của nhân viên:
+            此員工的考勤嗎：
           </p>
           {approvalAction && (
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -1910,14 +1957,14 @@ const AdminDashboard: React.FC = () => {
                 setApprovalAction(null);
               }}
             >
-              Hủy
+              取消
             </Button>
             <Button
               variant={approvalAction?.status === 'completed' ? 'default' : 'destructive'}
               onClick={handleConfirmApproval}
               className={approvalAction?.status === 'completed' ? 'bg-green-600 hover:bg-green-700' : ''}
             >
-              {approvalAction?.status === 'completed' ? 'Phê duyệt' : 'Từ chối'}
+              {approvalAction?.status === 'completed' ? '批准' : '拒絕'}
             </Button>
           </div>
         </div>
@@ -1930,12 +1977,12 @@ const AdminDashboard: React.FC = () => {
           setShowApproveDialog(false);
           setSelectedLeaveRequest(null);
         }}
-        title="Duyệt đơn nghỉ phép"
-        description="Bạn có chắc chắn muốn duyệt đơn nghỉ phép này?"
+        title="批准請假單"
+        description="您確定要批准此請假單嗎？"
         variant="default"
         onConfirm={handleConfirmApprove}
-        confirmText="Duyệt"
-        cancelText="Hủy"
+        confirmText="批准"
+        cancelText="取消"
       />
 
       {/* Reject Leave Request Dialog */}
@@ -1946,14 +1993,14 @@ const AdminDashboard: React.FC = () => {
           setSelectedLeaveRequest(null);
           setRejectionReason('');
         }}
-        title="Từ chối đơn nghỉ phép"
+        title="拒絕請假單"
         variant="danger"
         showActions={false}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Lý do từ chối <span className="text-red-500">*</span>
+              拒絕理由 <span className="text-red-500">*</span>
             </label>
             <textarea
               value={rejectionReason}
@@ -1961,7 +2008,7 @@ const AdminDashboard: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               rows={4}
               required
-              placeholder="Nhập lý do từ chối..."
+              placeholder="輸入拒絕理由..."
             />
           </div>
         </div>
@@ -1974,14 +2021,14 @@ const AdminDashboard: React.FC = () => {
               setRejectionReason('');
             }}
           >
-            Hủy
+            取消
           </Button>
           <Button
             variant="destructive"
             onClick={handleConfirmReject}
             disabled={leaveRequestActionLoading || !rejectionReason.trim()}
           >
-            {leaveRequestActionLoading ? 'Đang xử lý...' : 'Từ chối'}
+            {leaveRequestActionLoading ? '處理中...' : '拒絕'}
           </Button>
         </div>
       </Dialog>
@@ -1993,14 +2040,14 @@ const AdminDashboard: React.FC = () => {
           setShowDetailDialog(false);
           setSelectedLeaveRequest(null);
         }}
-        title="Chi tiết đơn nghỉ phép"
+        title="請假單詳情"
         showActions={false}
       >
         {selectedLeaveRequest && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nhân viên</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">員工</label>
                 <div className="p-2 bg-gray-50 rounded">
                   {typeof selectedLeaveRequest.userId === 'object' ? (
                     <>
@@ -2015,33 +2062,33 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày nghỉ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">請假日期</label>
                 <div className="p-2 bg-gray-50 rounded">
                   <p className="font-semibold">{formatDate(new Date(selectedLeaveRequest.leaveDate))}</p>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Loại nghỉ phép</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">請假類型</label>
                 <div className="p-2 bg-gray-50 rounded">
                   <p>{getLeaveTypeText(selectedLeaveRequest.leaveType)}</p>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
                 <div className="p-2 bg-gray-50 rounded">
                   {getLeaveRequestStatusBadge(selectedLeaveRequest.status)}
                 </div>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lý do nghỉ phép</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">請假理由</label>
               <div className="p-3 bg-gray-50 rounded">
                 <p className="text-gray-900">{selectedLeaveRequest.reason}</p>
               </div>
             </div>
             {selectedLeaveRequest.supportingStaff && selectedLeaveRequest.supportingStaff.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nhân viên hỗ trợ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">代理人</label>
                 <div className="p-3 bg-gray-50 rounded">
                   <div className="flex flex-wrap gap-2">
                     {getSupportingStaffNames(selectedLeaveRequest).map((name, idx) => (
@@ -2055,7 +2102,7 @@ const AdminDashboard: React.FC = () => {
             )}
             {selectedLeaveRequest.status === 'rejected' && selectedLeaveRequest.rejectionReason && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lý do từ chối</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">拒絕理由</label>
                 <div className="p-3 bg-red-50 border border-red-200 rounded">
                   <p className="text-red-900">{selectedLeaveRequest.rejectionReason}</p>
                 </div>
@@ -2064,13 +2111,13 @@ const AdminDashboard: React.FC = () => {
             {selectedLeaveRequest.reviewedBy && typeof selectedLeaveRequest.reviewedBy === 'object' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Người {selectedLeaveRequest.status === 'approved' ? 'duyệt' : 'từ chối'}
+                  {selectedLeaveRequest.status === 'approved' ? '批准' : '拒絕'}者
                 </label>
                 <div className="p-2 bg-gray-50 rounded">
                   <p className="font-semibold">{selectedLeaveRequest.reviewedBy.name}</p>
                   {selectedLeaveRequest.reviewedAt && (
                     <p className="text-sm text-gray-600">
-                      Vào {formatDate(new Date(selectedLeaveRequest.reviewedAt))}
+                      於 {formatDate(new Date(selectedLeaveRequest.reviewedAt))}
                     </p>
                   )}
                 </div>
@@ -2078,13 +2125,13 @@ const AdminDashboard: React.FC = () => {
             )}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày tạo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">建立日期</label>
                 <p className="text-sm text-gray-600">
                   {formatDate(new Date(selectedLeaveRequest.createdAt))}
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cập nhật lần cuối</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">最後更新</label>
                 <p className="text-sm text-gray-600">
                   {formatDate(new Date(selectedLeaveRequest.updatedAt))}
                 </p>
@@ -2098,7 +2145,7 @@ const AdminDashboard: React.FC = () => {
                   setSelectedLeaveRequest(null);
                 }}
               >
-                Đóng
+                關閉
               </Button>
             </div>
           </div>

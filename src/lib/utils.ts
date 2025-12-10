@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleDateString('vi-VN', {
+  return d.toLocaleDateString('zh-TW', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -16,7 +16,7 @@ export function formatDate(date: Date | string): string {
 
 export function formatDateTime(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleString('vi-VN', {
+  return d.toLocaleString('zh-TW', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -28,7 +28,7 @@ export function formatDateTime(date: Date | string): string {
 
 export function formatTime(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleTimeString('vi-VN', {
+  return d.toLocaleTimeString('zh-TW', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -48,17 +48,17 @@ export function formatHours(hours: number): string {
  */
 export function formatTimeDifference(minutes: number): string {
   if (minutes < 60) {
-    return `${minutes} phút`;
+    return `${minutes} 分鐘`;
   }
   
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
   
   if (remainingMinutes === 0) {
-    return `${hours} giờ`;
+    return `${hours} 小時`;
   }
   
-  return `${hours} giờ ${remainingMinutes} phút`;
+  return `${hours} 小時 ${remainingMinutes} 分鐘`;
 }
 
 

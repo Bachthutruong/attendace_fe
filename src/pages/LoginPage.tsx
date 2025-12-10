@@ -45,17 +45,17 @@ const LoginPage: React.FC = () => {
 
     if (isLoginMode) {
       if (!formData.loginId) {
-        toast.error('Vui lòng nhập mã nhân viên hoặc email');
+        toast.error('請輸入員工編號或電子郵件');
         return;
       }
       dispatch(login({ loginId: formData.loginId, password: formData.password }));
     } else {
       if (!formData.employeeCode) {
-        toast.error('Vui lòng nhập mã nhân viên');
+        toast.error('請輸入員工編號');
         return;
       }
       if (!formData.name) {
-        toast.error('Vui lòng nhập họ tên');
+        toast.error('請輸入姓名');
         return;
       }
       dispatch(register({
@@ -86,12 +86,12 @@ const LoginPage: React.FC = () => {
             )}
           </div>
           <CardTitle className="text-3xl font-bold">
-            {isLoginMode ? 'Đăng nhập' : 'Đăng ký'}
+            {isLoginMode ? '登入' : '註冊'}
           </CardTitle>
           <CardDescription>
             {isLoginMode
-              ? 'Đăng nhập để chấm công và quản lý'
-              : 'Tạo tài khoản mới để bắt đầu'}
+              ? '登入以進行考勤和管理'
+              : '建立新帳戶以開始使用'}
           </CardDescription>
         </CardHeader>
 
@@ -101,7 +101,7 @@ const LoginPage: React.FC = () => {
               <>
                 <div className="space-y-2">
                   <label htmlFor="employeeCode" className="text-sm font-medium">
-                    Mã nhân viên
+                    員工編號
                   </label>
                   <Input
                     id="employeeCode"
@@ -113,17 +113,17 @@ const LoginPage: React.FC = () => {
                     required={!isLoginMode}
                     className="uppercase"
                   />
-                  <p className="text-xs text-gray-500">VD: NV001, NV002, ...</p>
+                  <p className="text-xs text-gray-500">例如: NV001, NV002, ...</p>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
-                    Họ và tên
+                    姓名
                   </label>
                   <Input
                     id="name"
                     name="name"
                     type="text"
-                    placeholder="Nguyễn Văn A"
+                    placeholder="陳大文"
                     value={formData.name}
                     onChange={handleChange}
                     required={!isLoginMode}
@@ -135,23 +135,23 @@ const LoginPage: React.FC = () => {
             {isLoginMode ? (
               <div className="space-y-2">
                 <label htmlFor="loginId" className="text-sm font-medium">
-                  Mã nhân viên hoặc Email
+                  員工編號或電子郵件
                 </label>
                 <Input
                   id="loginId"
                   name="loginId"
                   type="text"
-                  placeholder="NV001 hoặc email@company.com"
+                  placeholder="NV001 或 email@company.com"
                   value={formData.loginId}
                   onChange={handleChange}
                   required
                 />
-                <p className="text-xs text-gray-500">Nhập mã nhân viên hoặc email</p>
+                <p className="text-xs text-gray-500">輸入員工編號或電子郵件</p>
               </div>
             ) : (
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
-                  Email
+                  電子郵件
                 </label>
                 <Input
                   id="email"
@@ -167,7 +167,7 @@ const LoginPage: React.FC = () => {
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                Mật khẩu
+                密碼
               </label>
               <Input
                 id="password"
@@ -181,7 +181,7 @@ const LoginPage: React.FC = () => {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Đang xử lý...' : isLoginMode ? 'Đăng nhập' : 'Đăng ký'}
+              {loading ? '處理中...' : isLoginMode ? '登入' : '註冊'}
             </Button>
           </form>
 
@@ -192,8 +192,8 @@ const LoginPage: React.FC = () => {
               className="text-sm text-primary hover:underline"
             >
               {isLoginMode
-                ? 'Chưa có tài khoản? Đăng ký ngay'
-                : 'Đã có tài khoản? Đăng nhập'}
+                ? '還沒有帳戶？立即註冊'
+                : '已有帳戶？登入'}
             </button>
           </div>
         </CardContent>
